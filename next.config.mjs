@@ -4,6 +4,14 @@ const nextConfig = {
   // large worker-aware build and jsforce is CommonJS that loads at runtime.
   serverExternalPackages: ['pdfjs-dist', 'jsforce'],
 
+  // pdf.js loads its worker with a runtime dynamic import, which the build's
+  // static file tracing cannot see. Without this the deployed function throws
+  // "Setting up fake worker failed" on every upload, because the worker module
+  // was never copied into the bundle.
+  outputFileTracingIncludes: {
+    '/api/extract': ['./node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs'],
+  },
+
   webpack: (config, { isServer }) => {
     if (isServer) {
       // `serverExternalPackages` matches package names, and the parser imports
