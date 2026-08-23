@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { findQuoteRange, normalise, resolveAnchor, resolveAnchors } from '@/lib/extraction/anchor';
-import { buildParagraphs, paragraphsToPrompt } from '@/lib/extraction/pdf';
+import { buildParagraphs, pageTextFromItems, paragraphsToPrompt } from '@/lib/extraction/pdf';
 import { emptyExtraction, getField, withField } from '@/shared/schema';
 import type { DocumentParagraph } from '@/shared/deal';
 
@@ -169,5 +169,68 @@ describe('paragraphsToPrompt', () => {
     const rendered = paragraphsToPrompt(PARAGRAPHS);
     expect(rendered).toContain('[p-1 | page 1]');
     expect(rendered).toContain('[p-3 | page 2]');
+  });
+});
+
+describe('pageTextFromItems', () => {
+  /** pdf.js reports positions bottom-up, so a later line has a *smaller* y. */
+  const line = (str: string, y: number) => ({ str, transform: [1, 0, 0, 1, 54, y] });
+
+  it('joins glyph runs that share a baseline into one line', () => {
+    const text = pageTextFromItems([line('Cap Rate: ', 700), line('6.75%', 700)]);
+    expect(text).toBe('Cap Rate: 6.75%');
+  });
+
+  it('tolerates sub-pixel baseline drift within a line', () => {
+    const text = pageTextFromItems([line('Price: ', 700), line('$1,842,000', 699.8)]);
+    expect(text).toBe('Price: $1,842,000');
+  });
+
+  it('separates normally spaced lines with a single newline', () => {
+    const text = pageTextFromItems([line('Line one', 700), line('Line two', 686), line('Line three', 672)]);
+    expect(text).toBe('Line one\nLine two\nLine three');
+  });
+
+  it('starts a new paragraph where the vertical gap exceeds the typical one', () => {
+    const text = pageTextFromItems([
+      line('Body line one', 700),
+      line('Body line two', 686),
+      line('Body line three', 672),
+      line('NEXT SECTION', 620), // a much larger gap
+      line('Body of next section', 606),
+    ]);
+    expect(text).toBe('Body line one\nBody line two\nBody line three\n\nNEXT SECTION\nBody of next section');
+  });
+
+  it('uses the median gap so one outlier cannot suppress every break', () => {
+    const items = [
+      line('a', 700), line('b', 686), line('c', 672),
+      line('HEADING', 500), // a huge outlier gap
+      line('d', 486), line('e', 472),
+      line('NEXT', 420),   // a real, more modest paragraph break
+    ];
+    const text = pageTextFromItems(items);
+    expect(text.split('\n\n')).toHaveLength(3);
+  });
+
+  it('produces paragraphs that buildParagraphs turns into separate anchors', () => {
+    const text = pageTextFromItems([
+      line('Summary figures follow', 700),
+      line('Price: $1,842,000', 686),
+      line('LEASE ABSTRACT', 600),
+      line('Commencement: October 1, 2019', 586),
+    ]);
+    const paragraphs = buildParagraphs([text]);
+    expect(paragraphs).toHaveLength(2);
+    expect(paragraphs[0].text).toBe('Summary figures follow Price: $1,842,000');
+    expect(paragraphs[1].text).toBe('LEASE ABSTRACT Commencement: October 1, 2019');
+  });
+
+  it('returns an empty string for a page with no text items', () => {
+    expect(pageTextFromItems([])).toBe('');
+  });
+
+  it('handles a single-line page without inventing a break', () => {
+    expect(pageTextFromItems([line('Only line', 700)])).toBe('Only line');
   });
 });

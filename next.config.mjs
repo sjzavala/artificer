@@ -1,8 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // pdf-parse and jsforce are CommonJS packages that must not be bundled by
-  // the server compiler — they load files/natives at runtime.
-  serverExternalPackages: ['pdf-parse', 'jsforce'],
+  // Left to Node's own resolver rather than the server bundler: pdfjs ships a
+  // large worker-aware build and jsforce is CommonJS that loads at runtime.
+  serverExternalPackages: ['pdfjs-dist', 'jsforce'],
   eslint: { ignoreDuringBuilds: true },
 };
 

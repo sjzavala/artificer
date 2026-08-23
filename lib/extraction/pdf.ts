@@ -20,49 +20,66 @@ const MAX_PARAGRAPH_CHARS = 900;
 const PARAGRAPH_GAP_RATIO = 1.45;
 
 /**
- * Loaded lazily and by its internal path. pdf-parse's package entry point runs a
- * debug branch that reads a bundled test PDF off disk, which fails the moment it
- * is packaged into a serverless bundle; the lib entry is the library itself.
+ * Loaded lazily, and from the legacy build — the one that runs without a
+ * browser worker.
+ *
+ * pdfjs-dist rather than pdf-parse: pdf-parse vendors a 2018 build of pdf.js
+ * that throws "bad XRef entry" on perfectly valid PDFs under Vercel's compiled
+ * Node runtime, while parsing the same bytes happily on a laptop. pdfjs-dist is
+ * the same library, maintained, and it exposes the per-item text positions this
+ * module needs to find paragraph boundaries.
  */
-async function loadPdfParse() {
-  const mod = await import('pdf-parse/lib/pdf-parse.js');
-  return (mod as unknown as { default?: PdfParseFn } & PdfParseFn).default ?? (mod as unknown as PdfParseFn);
+async function loadPdfjs() {
+  return import('pdfjs-dist/legacy/build/pdf.mjs');
 }
 
-type PdfParseFn = (
-  buffer: Buffer,
-  options?: Record<string, unknown>,
-) => Promise<{ numpages: number; text: string }>;
-
 export async function parsePdf(buffer: Buffer): Promise<ParsedDocument> {
-  const pdfParse = await loadPdfParse();
+  const pdfjs = await loadPdfjs();
+
+  const loadingTask = pdfjs.getDocument({
+    data: new Uint8Array(buffer),
+    // Text extraction only: nothing is rendered, so no fonts to fetch.
+    useSystemFonts: false,
+    disableFontFace: true,
+    // Silences the standard-font-data warnings pdf.js emits for glyphs it is
+    // never asked to draw; they would otherwise appear on every extraction.
+    verbosity: 0,
+  });
+  const doc = await loadingTask.promise;
+
+  const pageCount = doc.numPages;
   const pages: string[] = [];
 
-  const result = await pdfParse(buffer, {
-    // Capture text page by page so every paragraph anchor carries a real page
-    // number — "p. 7" in the UI has to mean page 7 of the source document.
-    pagerender: async (pageData: {
-      getTextContent: (opts: Record<string, boolean>) => Promise<{ items: Array<{ str: string; transform: number[] }> }>;
-    }) => {
-      const content = await pageData.getTextContent({
-        normalizeWhitespace: false,
-        disableCombineTextItems: false,
-      });
-      const text = pageTextFromItems(content.items);
-      pages.push(text);
-      return text;
-    },
-  });
+  try {
+    for (let pageNumber = 1; pageNumber <= pageCount; pageNumber += 1) {
+      const page = await doc.getPage(pageNumber);
+      const content = await page.getTextContent();
+      // getTextContent also yields marked-content markers, which carry no text.
+      const items: PositionedText[] = content.items
+        .filter((item) => 'str' in item)
+        .map((item) => {
+          const text = item as { str: string; transform: number[] };
+          return { str: text.str, transform: text.transform };
+        });
+      pages.push(pageTextFromItems(items));
+      page.cleanup();
+    }
+  } finally {
+    // Releases the worker and the parsed document; without it a long-lived
+    // server accumulates one parsed PDF per upload.
+    await loadingTask.destroy();
+  }
 
   const paragraphs = buildParagraphs(pages);
   return {
-    pageCount: result.numpages || pages.length,
+    pageCount,
     charCount: paragraphs.reduce((n, p) => n + p.text.length, 0),
     paragraphs,
   };
 }
 
-interface TextItem {
+/** The slice of a pdf.js text item that this module actually depends on. */
+interface PositionedText {
   str: string;
   transform: number[];
 }
@@ -81,13 +98,13 @@ interface TextLine {
  * anchor and render click-to-highlight useless. So we measure the document's own
  * typical line gap and treat anything noticeably larger as a paragraph break.
  */
-export function pageTextFromItems(items: TextItem[]): string {
+export function pageTextFromItems(items: PositionedText[]): string {
   const lines: TextLine[] = [];
 
   for (const item of items) {
     const y = item.transform[5];
     const previous = lines[lines.length - 1];
-    // Sub-pixel drift within a line is common; treat near-equal y as the same line.
+    // Sub-pixel drift within a line is common; treat near-equal y as one line.
     if (previous && Math.abs(previous.y - y) < 0.5) previous.text += item.str;
     else lines.push({ y, text: item.str });
   }
@@ -97,8 +114,8 @@ export function pageTextFromItems(items: TextItem[]): string {
   const gaps: number[] = [];
   for (let i = 1; i < lines.length; i += 1) gaps.push(Math.abs(lines[i - 1].y - lines[i].y));
 
-  // Median, not mean: a single large gap (a heading, a footer) must not drag
-  // the baseline up and suppress every real paragraph break on the page.
+  // Median, not mean: one large gap (a heading, a footer) must not drag the
+  // baseline up and suppress every real paragraph break on the page.
   const sorted = [...gaps].sort((a, b) => a - b);
   const medianGap = sorted.length ? sorted[Math.floor(sorted.length / 2)] : 0;
   const paragraphGap = medianGap * PARAGRAPH_GAP_RATIO;

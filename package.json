@@ -24,7 +24,7 @@
     "jsforce": "^3.10.22",
     "lucide-react": "^0.545.0",
     "next": "15.5.23",
-    "pdf-parse": "^1.1.1",
+    "pdfjs-dist": "^6.2.108",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "zod": "^3.25.76"

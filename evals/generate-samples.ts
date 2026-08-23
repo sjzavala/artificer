@@ -62,11 +62,11 @@ function drawBlock(doc: Doc, block: SampleBlock): void {
       doc.moveDown(0.3);
       break;
     case 'subtitle':
-      doc.fillColor(MUTED).font('Helvetica').fontSize(11).text(block.text, { align: 'center', characterSpacing: 1 });
+      doc.fillColor(MUTED).font('Helvetica').fontSize(11).text(block.text, { align: 'center' });
       doc.moveDown(0.4);
       break;
     case 'heading':
-      doc.moveDown(1).fillColor(INK).font('Helvetica-Bold').fontSize(12).text(block.text, { characterSpacing: 0.6 });
+      doc.moveDown(1).fillColor(INK).font('Helvetica-Bold').fontSize(12).text(block.text);
       rule(doc);
       break;
     case 'kv':
@@ -111,7 +111,8 @@ function watermark(doc: Doc): void {
     .text('FICTIONAL SAMPLE — GENERATED FOR ARTIFICER DEMONSTRATION AND EVALUATION', 54, doc.page.height - 40, {
       align: 'center',
       width: doc.page.width - 108,
-      characterSpacing: 0.8,
+      // No character spacing: pdf.js emits letter-spaced text as separate
+      // glyph runs, which extracts as "F I C T I O N A L".
       lineBreak: false,
     })
     .restore();
