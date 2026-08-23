@@ -1,4 +1,3 @@
-import crypto from 'node:crypto';
 import path from 'node:path';
 import { LocalFileStore } from './local';
 import { BlobStore } from './blob';
@@ -38,16 +37,14 @@ function createStore(): Store {
     if (!token) {
       throw new Error('ARTIFICER_STORE=blob but BLOB_READ_WRITE_TOKEN is not set.');
     }
-    return new BlobStore(blobNamespace(), token);
+    return new BlobStore(BLOB_NAMESPACE, token);
   }
   return new LocalFileStore(process.env.ARTIFICER_DATA_DIR ?? path.join(process.cwd(), 'data'));
 }
 
 /**
- * A stable, non-guessable prefix for blob keys. Derived from the session
- * secret so it survives redeploys but changes if the secret is rotated.
+ * A plain, stable prefix. The store is private, so the namespace is only there
+ * to keep Artificer's objects tidy alongside anything else in the same store —
+ * it is organisation, not a security measure.
  */
-function blobNamespace(): string {
-  const seed = process.env.ARTIFICER_SESSION_SECRET ?? 'artificer-default-namespace';
-  return `artificer/${crypto.createHash('sha256').update(seed).digest('hex').slice(0, 16)}`;
-}
+const BLOB_NAMESPACE = 'artificer';

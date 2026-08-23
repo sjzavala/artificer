@@ -34,10 +34,15 @@ Requires Node 20+.
 
 ```bash
 npm install
-cp .env.example .env.local     # then fill in ANTHROPIC_API_KEY and the gate values
+cp .env.example .env.local     # then fill in the gate values below
+./scripts/set-api-key.sh       # prompts for ANTHROPIC_API_KEY (hidden input)
 npm run seed                   # plants the sample deal so the app is never empty
 npm run dev                    # http://localhost:3000
 ```
+
+`set-api-key.sh` writes the key to `.env.local` and, if the Vercel CLI is
+available, to the production environment too. It never puts the key on a command
+line or in shell history.
 
 Generate the two gate values:
 
@@ -87,10 +92,8 @@ vercel --prod                                     # redeploy to pick it up
 ```
 
 Existing sessions stay valid until their cookie expires. To invalidate every
-session immediately, rotate `ARTIFICER_SESSION_SECRET` instead — but note that
-the Blob storage namespace is derived from that secret, so rotating it makes
-previously stored deals unreachable. Rotate the code, not the secret, unless you
-intend to reset the data too.
+session immediately, rotate `ARTIFICER_SESSION_SECRET` as well — stored deals are
+unaffected, since the storage namespace does not depend on it.
 
 ---
 
@@ -99,15 +102,21 @@ intend to reset the data too.
 One interface, two implementations, chosen by environment:
 
 - **`LocalFileStore`** — JSON files under `/data` (gitignored). Used in development.
-- **`BlobStore`** — the same JSON documents as Vercel Blob objects. Used in
-  production, activated by the presence of `BLOB_READ_WRITE_TOKEN`.
+- **`BlobStore`** — the same JSON documents as objects in a **private** Vercel Blob
+  store. Used in production, activated by the presence of `BLOB_READ_WRITE_TOKEN`.
+  Private matters: the app's access gate would be beside the point if the deal
+  data underneath it were readable by URL.
 
-Nothing above the seam knows which is live; the header shows which one is.
+Nothing above the seam knows which is live; the header shows which one is. To
+exercise the live adapter against the real service:
 
-Two honest limitations: the audit log is a single JSON document appended under an
-in-process lock, so it assumes one writer at a time; and Vercel Blob is
-public-read, so keys live under a namespace derived from the session secret —
-obfuscation, not access control.
+```bash
+ARTIFICER_STORE=blob npm run check-store
+```
+
+One honest limitation: the audit log is a single JSON document appended under an
+in-process lock, so it assumes one writer at a time. That is fine for a review
+tool with a handful of users and would need a real append-only store beyond that.
 
 ---
 

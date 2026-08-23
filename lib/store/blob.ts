@@ -1,13 +1,14 @@
-import { list, put, del } from '@vercel/blob';
+import { list, put, del, get } from '@vercel/blob';
 import { assertValidKey, type Store } from './types';
 
 /**
- * Production store: the same JSON documents, held as Vercel Blob objects.
+ * Production store: the same JSON documents, held as Vercel Blob objects in a
+ * **private** store.
  *
- * Vercel Blob only offers public-read URLs, so every key lives under a
- * namespace derived from ARTIFICER_SESSION_SECRET. That keeps demo data from
- * being trivially guessable at a stable path — it is obfuscation, not access
- * control, and the README says so.
+ * Private access matters here — deal data must not be reachable by anyone who
+ * guesses a URL, and the app's own gate would be beside the point if the
+ * underlying blobs were public. Reads go through the SDK's authenticated `get`,
+ * so nothing is served without the store token.
  */
 export class BlobStore implements Store {
   readonly kind = 'blob' as const;
@@ -22,27 +23,25 @@ export class BlobStore implements Store {
     return `${this.namespace}/${key}`;
   }
 
-  private async urlFor(key: string): Promise<string | null> {
-    const pathname = this.pathFor(key);
-    const { blobs } = await list({ prefix: pathname, limit: 100, token: this.token });
-    const hit = blobs.find((b) => b.pathname === pathname);
-    return hit?.url ?? null;
-  }
-
   async read<T>(key: string): Promise<T | null> {
-    const url = await this.urlFor(key);
-    if (!url) return null;
-    // Blob URLs sit behind a CDN; without no-store a just-written deal can read
-    // back stale, which in this app looks like a lost approval.
-    const res = await fetch(url, { cache: 'no-store' });
-    if (res.status === 404) return null;
-    if (!res.ok) throw new Error(`Blob read failed for ${key}: ${res.status}`);
-    return (await res.json()) as T;
+    const result = await get(this.pathFor(key), {
+      access: 'private',
+      // Blob reads are CDN-cached by default; without this a deal read straight
+      // after approval can come back stale, which looks like a lost write.
+      useCache: false,
+      token: this.token,
+    }).catch((err: unknown) => {
+      if (isNotFound(err)) return null;
+      throw err;
+    });
+
+    if (!result || result.statusCode !== 200) return null;
+    return JSON.parse(await streamToString(result.stream)) as T;
   }
 
   async write<T>(key: string, value: T): Promise<void> {
     await put(this.pathFor(key), JSON.stringify(value, null, 2), {
-      access: 'public',
+      access: 'private',
       contentType: 'application/json',
       addRandomSuffix: false,
       allowOverwrite: true,
@@ -55,16 +54,38 @@ export class BlobStore implements Store {
     const full = `${this.namespace}/${prefix}`;
     const keys: string[] = [];
     let cursor: string | undefined;
+
     do {
       const page = await list({ prefix: full, cursor, limit: 1000, token: this.token });
       for (const blob of page.blobs) keys.push(blob.pathname.slice(this.namespace.length + 1));
       cursor = page.hasMore ? page.cursor : undefined;
     } while (cursor);
+
     return keys.sort();
   }
 
   async remove(key: string): Promise<void> {
-    const url = await this.urlFor(key);
-    if (url) await del(url, { token: this.token });
+    await del(this.pathFor(key), { token: this.token }).catch((err: unknown) => {
+      // Removing something already gone is not an error, per the Store contract.
+      if (!isNotFound(err)) throw err;
+    });
   }
+}
+
+function isNotFound(err: unknown): boolean {
+  const name = (err as { name?: string })?.name ?? '';
+  const message = (err as { message?: string })?.message ?? '';
+  return name === 'BlobNotFoundError' || /not found|404/i.test(message);
+}
+
+async function streamToString(stream: ReadableStream<Uint8Array>): Promise<string> {
+  const reader = stream.getReader();
+  const decoder = new TextDecoder();
+  let out = '';
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    out += decoder.decode(value, { stream: true });
+  }
+  return out + decoder.decode();
 }
