@@ -1,0 +1,8 @@
+# Never upload local state or secrets to the build.
+.env
+.env.local
+.env.*.local
+/data
+/evals/results
+/tests
+.playwright-mcp
