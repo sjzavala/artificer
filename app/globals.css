@@ -1,0 +1,72 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background-color: theme('colors.paper');
+  color: theme('colors.ink.DEFAULT');
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Money and measurements line up in columns; this is a finance tool. */
+.tnum {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+/* The provenance highlight. Deliberately the warmest thing on the page so the
+   eye lands on it the instant the document pane scrolls. */
+mark.provenance {
+  background-color: #fdf0c8;
+  box-shadow: 0 0 0 3px #fdf0c8;
+  border-radius: 2px;
+  color: inherit;
+  transition: background-color 200ms ease;
+}
+
+mark.provenance.is-active {
+  background-color: #fbe08a;
+  box-shadow: 0 0 0 3px #fbe08a;
+}
+
+@keyframes anchor-pulse {
+  0% { background-color: rgba(251, 224, 138, 0); }
+  30% { background-color: rgba(251, 224, 138, 0.55); }
+  100% { background-color: rgba(251, 224, 138, 0); }
+}
+
+.anchor-pulse {
+  animation: anchor-pulse 1200ms ease-out;
+}
+
+/* Restrained, consistent focus treatment across inputs and buttons. */
+.focus-ring:focus-visible {
+  outline: 2px solid theme('colors.accent.DEFAULT');
+  outline-offset: 2px;
+}
+
+.scroll-pane {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+.scroll-pane::-webkit-scrollbar {
+  width: 10px;
+}
+
+.scroll-pane::-webkit-scrollbar-thumb {
+  background-color: #d7dbd6;
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
