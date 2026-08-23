@@ -19,6 +19,34 @@ export class ExtractionError extends Error {
   }
 }
 
+/**
+ * Turns an Anthropic API failure into something an operator can act on. A bad
+ * key and an unsupported model both surface as opaque 4xx otherwise, and
+ * "extraction failed unexpectedly" sends people to the wrong place.
+ */
+export function describeApiError(err: unknown): string | null {
+  const e = err as { status?: number; error?: { error?: { message?: string } }; message?: string };
+  if (typeof e?.status !== 'number') return null;
+
+  const detail = e.error?.error?.message ?? e.message ?? '';
+  switch (e.status) {
+    case 401:
+      return 'The Anthropic API key was rejected. Check ANTHROPIC_API_KEY on the server.';
+    case 403:
+      return 'The Anthropic API key is not permitted to use this model.';
+    case 404:
+      return `The configured model was not found. Check ANTHROPIC_MODEL (currently "${DEFAULT_MODEL}").`;
+    case 429:
+      return 'The Anthropic API is rate limiting this key. Wait a moment and try again.';
+    case 400:
+      return `The Anthropic API rejected the request: ${detail}`;
+    default:
+      return e.status >= 500
+        ? 'The Anthropic API is unavailable right now. Try again shortly.'
+        : `The Anthropic API returned ${e.status}: ${detail}`;
+  }
+}
+
 export interface ExtractionOutcome {
   extraction: NetLeaseExtraction;
   meta: ExtractionMeta;
@@ -122,12 +150,10 @@ async function extractChunk(
       max_tokens: MAX_OUTPUT_TOKENS,
       temperature: 0,
       system: EXTRACTION_SYSTEM_PROMPT,
-      messages: [
-        { role: 'user', content: userContent },
-        // Prefilling the opening brace removes the model's easiest way to add
-        // a preamble, which is the most common cause of a failed parse.
-        { role: 'assistant', content: '{' },
-      ],
+      // No assistant-message prefill: several current models reject it outright,
+      // and relying on it would make the pipeline model-specific. The defensive
+      // parser and the schema-repair retry below cover the same ground.
+      messages: [{ role: 'user', content: userContent }],
     });
 
     inputTokens += response.usage.input_tokens;
@@ -138,7 +164,7 @@ async function extractChunk(
       .map((block) => block.text)
       .join('');
 
-    const parsed = parseExtractionResponse(`{${body}`);
+    const parsed = parseExtractionResponse(body);
     if (parsed.ok) {
       return { extraction: parsed.data, inputTokens, outputTokens, attempts: attempt };
     }

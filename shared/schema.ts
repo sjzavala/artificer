@@ -253,8 +253,10 @@ export const FIELD_SPECS: readonly FieldSpec[] = [
     path: 'lease.remainingTermYears', section: 'lease', key: 'remainingTermYears',
     label: 'Remaining Term', kind: 'number', unit: 'years', computable: true,
     description:
-      'Years remaining on the primary term. If the document states it, quote it and use "high". If you compute it ' +
-      'from the expiration date, round to one decimal and use "medium".',
+      'Years remaining on the primary term. You do not know today\'s date, so do not compute this from the ' +
+      'expiration date alone. Report it only when the document states it, or when the document gives an ' +
+      '"as of" date you can measure from — in which case round to one decimal and use "medium". ' +
+      'Otherwise this is not_found.',
   },
   {
     path: 'lease.renewalOptions', section: 'lease', key: 'renewalOptions',

@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { parsePdf } from '@/lib/extraction/pdf';
-import { extractDeal, ExtractionError } from '@/lib/extraction/client';
+import { describeApiError, extractDeal, ExtractionError } from '@/lib/extraction/client';
 import { computeDealHash, putDeal } from '@/lib/deals';
 import { recordAudit } from '@/lib/audit';
 import { newId } from '@/lib/ids';
@@ -111,7 +111,7 @@ export async function POST(request: NextRequest) {
     const message =
       err instanceof ExtractionError
         ? err.message
-        : 'Extraction failed unexpectedly. Check the server logs.';
+        : describeApiError(err) ?? 'Extraction failed unexpectedly. Check the server logs.';
     console.error('[artificer] extraction failed', err);
 
     await recordAudit({

@@ -15,7 +15,8 @@
     "generate-samples": "tsx evals/generate-samples.ts",
     "eval": "tsx evals/run.ts",
     "check-store": "tsx scripts/check-store.ts",
-    "check-model": "tsx scripts/check-model.ts"
+    "check-model": "tsx scripts/check-model.ts",
+    "inspect-pdf": "tsx scripts/inspect-pdf.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.120.0",
@@ -30,6 +31,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.15.3",
+    "@types/pdfkit": "^0.17.6",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "autoprefixer": "^10.4.21",

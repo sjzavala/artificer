@@ -16,6 +16,9 @@ export interface ParsedDocument {
 /** Paragraphs longer than this are split so a highlight stays readable. */
 const MAX_PARAGRAPH_CHARS = 900;
 
+/** A vertical gap this many times the page's typical line gap starts a paragraph. */
+const PARAGRAPH_GAP_RATIO = 1.45;
+
 /**
  * Loaded lazily and by its internal path. pdf-parse's package entry point runs a
  * debug branch that reads a bundled test PDF off disk, which fails the moment it
@@ -45,14 +48,7 @@ export async function parsePdf(buffer: Buffer): Promise<ParsedDocument> {
         normalizeWhitespace: false,
         disableCombineTextItems: false,
       });
-      let lastY: number | undefined;
-      let text = '';
-      for (const item of content.items) {
-        const y = item.transform[5];
-        if (lastY === undefined || lastY === y) text += item.str;
-        else text += `\n${item.str}`;
-        lastY = y;
-      }
+      const text = pageTextFromItems(content.items);
       pages.push(text);
       return text;
     },
@@ -64,6 +60,55 @@ export async function parsePdf(buffer: Buffer): Promise<ParsedDocument> {
     charCount: paragraphs.reduce((n, p) => n + p.text.length, 0),
     paragraphs,
   };
+}
+
+interface TextItem {
+  str: string;
+  transform: number[];
+}
+
+interface TextLine {
+  y: number;
+  text: string;
+}
+
+/**
+ * Turns positioned glyph runs into lines, and lines into paragraphs.
+ *
+ * A PDF has no notion of a paragraph — only text at coordinates — so the only
+ * signal available is vertical spacing. Splitting on *any* line change would
+ * make every line its own anchor; splitting on none would make a whole page one
+ * anchor and render click-to-highlight useless. So we measure the document's own
+ * typical line gap and treat anything noticeably larger as a paragraph break.
+ */
+export function pageTextFromItems(items: TextItem[]): string {
+  const lines: TextLine[] = [];
+
+  for (const item of items) {
+    const y = item.transform[5];
+    const previous = lines[lines.length - 1];
+    // Sub-pixel drift within a line is common; treat near-equal y as the same line.
+    if (previous && Math.abs(previous.y - y) < 0.5) previous.text += item.str;
+    else lines.push({ y, text: item.str });
+  }
+
+  if (lines.length === 0) return '';
+
+  const gaps: number[] = [];
+  for (let i = 1; i < lines.length; i += 1) gaps.push(Math.abs(lines[i - 1].y - lines[i].y));
+
+  // Median, not mean: a single large gap (a heading, a footer) must not drag
+  // the baseline up and suppress every real paragraph break on the page.
+  const sorted = [...gaps].sort((a, b) => a - b);
+  const medianGap = sorted.length ? sorted[Math.floor(sorted.length / 2)] : 0;
+  const paragraphGap = medianGap * PARAGRAPH_GAP_RATIO;
+
+  let text = lines[0].text;
+  for (let i = 1; i < lines.length; i += 1) {
+    const gap = Math.abs(lines[i - 1].y - lines[i].y);
+    text += paragraphGap > 0 && gap > paragraphGap ? `\n\n${lines[i].text}` : `\n${lines[i].text}`;
+  }
+  return text;
 }
 
 export function buildParagraphs(pages: string[]): DocumentParagraph[] {
