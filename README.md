@@ -104,8 +104,9 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 # access code — anything memorable
 ```
 
-The app opens on the access gate. Enter `ARTIFICER_ACCESS_CODE` to get in, then
-follow the built-in walkthrough: it takes you from the sample deal through a
+The app opens on the access gate. Enter `ARTIFICER_ACCESS_CODE` to get in. The
+**How it works** tab explains the pipeline, the confidence grades and the steps;
+the built-in walkthrough then runs you through them: it takes you from the sample deal through a
 citation, a correction, an approval, the CRM record and an OM draft, ticking off
 each step as you actually perform it.
 
@@ -194,6 +195,7 @@ test that fails if they ever drift apart.
 ```
 app/                    Next.js App Router — pages and API routes
   gate/                 access code page
+  how-it-works/         the guide: pipeline, steps, grades, principles
   page.tsx              deals list + upload
   deals/[id]/           the approval screen
   records/[id]/         mock CRM record view

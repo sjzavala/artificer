@@ -15,7 +15,7 @@ export function AppShell({
   sampleDealHref = null,
 }: {
   children: React.ReactNode;
-  active: 'deals' | 'audit' | null;
+  active: 'guide' | 'deals' | 'audit' | null;
   salesforceMode: string;
   /** Lets the walkthrough's first step link straight to the seeded deal. */
   sampleDealHref?: string | null;
@@ -31,6 +31,7 @@ export function AppShell({
           </Link>
 
           <nav className="flex items-center gap-1 text-sm">
+            <NavLink href="/how-it-works" label="How it works" active={active === 'guide'} />
             <NavLink href="/" label="Deals" active={active === 'deals'} />
             <NavLink href="/audit" label="Audit" active={active === 'audit'} />
           </nav>
