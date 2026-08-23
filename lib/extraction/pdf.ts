@@ -1,4 +1,5 @@
 import type { DocumentParagraph } from '@/shared/deal';
+import { installPdfGlobals } from './dom-matrix';
 
 /**
  * We deliberately do not render the PDF visually. The approval screen's core
@@ -30,6 +31,9 @@ const PARAGRAPH_GAP_RATIO = 1.45;
  * module needs to find paragraph boundaries.
  */
 async function loadPdfjs() {
+  // Must run before the import: pdf.js only installs its own polyfill when
+  // globalThis.DOMMatrix is absent, and it constructs one at module scope.
+  installPdfGlobals();
   return import('pdfjs-dist/legacy/build/pdf.mjs');
 }
 
