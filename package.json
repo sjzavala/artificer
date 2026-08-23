@@ -14,7 +14,8 @@
     "seed": "tsx scripts/seed.ts",
     "generate-samples": "tsx evals/generate-samples.ts",
     "eval": "tsx evals/run.ts",
-    "check-store": "tsx scripts/check-store.ts"
+    "check-store": "tsx scripts/check-store.ts",
+    "check-model": "tsx scripts/check-model.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.120.0",
