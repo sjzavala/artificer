@@ -16,7 +16,8 @@
     "eval": "tsx evals/run.ts",
     "check-store": "tsx scripts/check-store.ts",
     "check-model": "tsx scripts/check-model.ts",
-    "inspect-pdf": "tsx scripts/inspect-pdf.ts"
+    "inspect-pdf": "tsx scripts/inspect-pdf.ts",
+    "reset-demo": "tsx scripts/reset-demo.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.120.0",
