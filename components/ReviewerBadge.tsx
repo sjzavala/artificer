@@ -54,12 +54,12 @@ export function ReviewerBadge() {
       type="button"
       onClick={() => setEditing(true)}
       title="Set the name recorded in the audit log"
-      className="focus-ring inline-flex items-center gap-2 rounded-full border border-rule bg-panel py-1 pl-1 pr-3 text-sm text-ink-muted transition-colors hover:border-rule-strong hover:text-ink"
+      className="focus-ring inline-flex items-center gap-2 rounded-full border border-chrome-line bg-chrome-soft py-1 pl-1 pr-3 text-sm text-chrome-text transition-colors hover:border-chrome-text/40 hover:text-white"
     >
       <span
         aria-hidden
         className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-2xs font-semibold ${
-          name ? 'bg-accent text-white' : 'bg-sunken text-ink-faint'
+          name ? 'bg-emerald-500 text-white' : 'bg-chrome text-chrome-text/60'
         }`}
       >
         {name ? initials(name) : <UserRound size={12} />}

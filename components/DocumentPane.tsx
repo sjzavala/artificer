@@ -18,12 +18,15 @@ export function DocumentPane({
   activeQuote,
   fileName,
   pageCount,
+  hasSelection,
 }: {
   paragraphs: DocumentParagraph[];
   activeAnchor: string | null;
   activeQuote: string | null;
   fileName: string;
   pageCount: number;
+  /** False until a field is clicked, so the pane can explain itself first. */
+  hasSelection: boolean;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -55,14 +58,23 @@ export function DocumentPane({
       className="flex h-full min-h-0 flex-col overflow-hidden rounded-lg border border-rule bg-panel"
       aria-label="Source document"
     >
-      <header className="flex shrink-0 items-center justify-between gap-3 border-b border-rule px-4 py-2.5">
-        <h2 className="truncate text-xs font-medium text-ink" title={fileName}>
+      <header className="shrink-0 border-b border-rule bg-sunken px-4 py-2.5">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-xs font-semibold text-ink">Source document</h2>
+          <span className="shrink-0 text-2xs text-ink-muted">
+            {pageCount} page{pageCount === 1 ? '' : 's'} · text extract
+          </span>
+        </div>
+        <p className="mt-0.5 truncate text-2xs text-ink-muted" title={fileName}>
           {fileName}
-        </h2>
-        <span className="shrink-0 text-2xs uppercase tracking-wider text-ink-faint">
-          {pageCount} page{pageCount === 1 ? '' : 's'} · text extract
-        </span>
+        </p>
       </header>
+
+      {!hasSelection ? (
+        <p className="shrink-0 border-b border-amber-200 bg-amber-50 px-4 py-2 text-2xs text-amber-900">
+          Click any field on the right and the passage it was read from will be highlighted here.
+        </p>
+      ) : null}
 
       <div ref={scrollRef} className="scroll-pane min-h-0 flex-1 overflow-y-auto px-5 py-5">
         <div className="mx-auto max-w-[46rem]">

@@ -22,10 +22,12 @@ export function AppShell({
 }) {
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="sticky top-0 z-30 border-b border-rule bg-paper/80 backdrop-blur-md">
+      {/* Dark chrome: a deep band at the top gives the page an anchor and stops
+          a white-card layout from reading as an unfinished wireframe. */}
+      <header className="sticky top-0 z-30 border-b border-chrome-line bg-chrome bg-chrome-sheen">
         <div className="mx-auto flex h-16 w-full max-w-[100rem] items-center gap-8 px-5 sm:px-8">
           <Link href="/" className="focus-ring rounded-sm">
-            <Brand />
+            <Brand onDark />
           </Link>
 
           <nav className="flex items-center gap-1 text-sm">
@@ -40,13 +42,13 @@ export function AppShell({
             {salesforceMode === 'mock' ? (
               <span
                 title="Approvals are written to Artificer's mock CRM, not to a live Salesforce org."
-                className="hidden items-center gap-1.5 rounded-full border border-rule bg-panel px-2.5 py-1 text-2xs text-ink-muted sm:inline-flex"
+                className="hidden items-center gap-1.5 rounded-full border border-chrome-line bg-chrome-soft px-2.5 py-1 text-2xs text-chrome-text sm:inline-flex"
               >
-                <Database size={11} className="text-ink-faint" />
+                <Database size={11} className="text-chrome-text/60" />
                 Demo CRM
               </span>
             ) : (
-              <span className="hidden items-center gap-1.5 rounded-full border border-accent-ring bg-accent-soft px-2.5 py-1 text-2xs font-medium text-accent sm:inline-flex">
+              <span className="hidden items-center gap-1.5 rounded-full border border-emerald-400/40 bg-emerald-400/15 px-2.5 py-1 text-2xs font-medium text-emerald-300 sm:inline-flex">
                 <Database size={11} />
                 Live Salesforce
               </span>
@@ -69,12 +71,12 @@ function NavLink({ href, label, active }: { href: string; label: string; active:
       href={href}
       aria-current={active ? 'page' : undefined}
       className={`focus-ring relative rounded-md px-3 py-2 transition-colors ${
-        active ? 'font-medium text-ink' : 'text-ink-muted hover:text-ink'
+        active ? 'font-medium text-white' : 'text-chrome-text/70 hover:text-white'
       }`}
     >
       {label}
       {active ? (
-        <span aria-hidden className="absolute inset-x-3 -bottom-[0.8125rem] h-[2px] rounded-full bg-accent" />
+        <span aria-hidden className="absolute inset-x-3 -bottom-[0.8125rem] h-[2px] rounded-full bg-emerald-400" />
       ) : null}
     </Link>
   );

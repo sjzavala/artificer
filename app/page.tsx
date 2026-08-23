@@ -1,5 +1,6 @@
 import Link from 'next/link';
-import { ArrowUpRight, CircleAlert, FileText } from 'lucide-react';
+import { ArrowUpRight, CircleAlert, FileText, ShieldCheck, Inbox, TriangleAlert } from 'lucide-react';
+import { PipelineStepper } from '@/components/PipelineStepper';
 import { AppShell } from '@/components/AppShell';
 import { UploadDropzone } from '@/components/UploadDropzone';
 import { StatusPill } from '@/components/ConfidenceChip';
@@ -34,15 +35,19 @@ export default async function DealsPage() {
               Deals
             </h1>
             <p className="mt-3 max-w-xl text-sm leading-relaxed text-ink-soft">
-              Drop in a deal document. Claude extracts the net-lease terms with a citation for every
+              Drop in a deal document. Artificer extracts the net-lease terms with a citation for every
               value; you review, correct and approve before anything is written to Salesforce.
             </p>
 
             <dl className="mt-7 grid max-w-xl grid-cols-3 gap-3">
-              <Stat label="Awaiting review" value={needingReview} />
-              <Stat label="Approved" value={approved} tone="accent" />
-              <Stat label="Fields flagged" value={flagged} tone={flagged > 0 ? 'warn' : 'plain'} />
+              <Stat label="Awaiting review" value={needingReview} tone="amber" icon={<Inbox size={13} />} />
+              <Stat label="Approved" value={approved} tone="emerald" icon={<ShieldCheck size={13} />} />
+              <Stat label="Fields flagged" value={flagged} tone="red" icon={<TriangleAlert size={13} />} />
             </dl>
+
+            <div className="mt-7 max-w-xl">
+              <PipelineStepper current="upload" />
+            </div>
           </div>
 
           <div className="lg:pt-8">
@@ -68,22 +73,35 @@ export default async function DealsPage() {
 function Stat({
   label,
   value,
-  tone = 'plain',
+  tone,
+  icon,
 }: {
   label: string;
   value: number;
-  tone?: 'plain' | 'accent' | 'warn';
+  tone: 'amber' | 'emerald' | 'red';
+  icon: React.ReactNode;
 }) {
-  const valueTone = {
-    plain: 'text-ink',
-    accent: 'text-accent',
-    warn: 'text-amber-700',
+  // A zero is not a warning, so a colour that shouts is reserved for a count
+  // that actually wants attention.
+  const active = value > 0;
+  const styles = {
+    amber: { chip: 'bg-amber-100 text-amber-700', value: 'text-amber-700', edge: 'bg-amber-400' },
+    emerald: { chip: 'bg-emerald-100 text-emerald-700', value: 'text-emerald-700', edge: 'bg-emerald-500' },
+    red: { chip: 'bg-red-100 text-red-700', value: 'text-red-700', edge: 'bg-red-400' },
   }[tone];
 
   return (
-    <div className="rounded-lg border border-rule bg-panel px-3.5 py-3 shadow-card">
-      <dt className="text-2xs uppercase tracking-wider text-ink-faint">{label}</dt>
-      <dd className={`tnum display mt-1 text-2xl font-semibold leading-none ${valueTone}`}>{value}</dd>
+    <div className="relative overflow-hidden rounded-lg border border-rule bg-panel px-3.5 py-3 shadow-card">
+      <span aria-hidden className={`absolute inset-y-0 left-0 w-1 ${active ? styles.edge : 'bg-rule'}`} />
+      <dt className="flex items-center gap-1.5 pl-1.5 text-2xs uppercase tracking-wider text-ink-faint">
+        <span className={`flex h-5 w-5 items-center justify-center rounded ${active ? styles.chip : 'bg-sunken text-ink-faint'}`}>
+          {icon}
+        </span>
+        {label}
+      </dt>
+      <dd className={`tnum display mt-1.5 pl-1.5 text-2xl font-semibold leading-none ${active ? styles.value : 'text-ink-faint'}`}>
+        {value}
+      </dd>
     </div>
   );
 }

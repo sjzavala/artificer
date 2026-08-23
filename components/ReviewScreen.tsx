@@ -9,6 +9,9 @@ import { FieldRow } from './FieldRow';
 import { ApprovalModal } from './ApprovalModal';
 import { StatusPill } from './ConfidenceChip';
 import { OmDraftPanel } from './OmDraftPanel';
+import { PipelineStepper, type Stage } from './PipelineStepper';
+import { ConfidenceMeter } from './ConfidenceMeter';
+import { SECTION_STYLES } from './sections';
 import { buildPayloads, payloadFieldCounts } from '@/lib/salesforce/mapping';
 import { requireReviewerName } from '@/lib/reviewer';
 import { completeStep } from '@/lib/walkthrough';
@@ -167,7 +170,7 @@ export function ReviewScreen({ deal, salesforceMode }: { deal: Deal; salesforceM
      * screen, so a reviewer never loses the document while reading the data.
      * Below `lg` it collapses to ordinary page flow with stacked panes.
      */
-    <div className="flex flex-col lg:h-[calc(100vh-3.5rem)] lg:overflow-hidden">
+    <div className="flex flex-col lg:h-[calc(100vh-4rem)] lg:overflow-hidden">
       <div className="mx-auto w-full max-w-[100rem] shrink-0 px-5 pt-6 sm:px-8">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
           <Link
@@ -181,12 +184,20 @@ export function ReviewScreen({ deal, salesforceMode }: { deal: Deal; salesforceM
           </h1>
           <StatusPill status={deal.status} />
           <span className="text-2xs text-ink-faint">
-            Extracted {formatTimestamp(deal.createdAt)} · {deal.extractionMeta.model} ·{' '}
+            Extracted {formatTimestamp(deal.createdAt)} · Artificer ·{' '}
             <span className="tnum">
               {(deal.extractionMeta.inputTokens + deal.extractionMeta.outputTokens).toLocaleString()}
             </span>{' '}
             tokens
           </span>
+        </div>
+
+        <div className="mt-4">
+          <PipelineStepper
+            current={approved ? 'crm' : 'approve'}
+            done={approved ? (['upload', 'review', 'approve', 'crm'] as Stage[]) : (['upload', 'review'] as Stage[])}
+            recordHref={written?.mode === 'mock' ? `/records/${written.dealId}` : null}
+          />
         </div>
 
         {deal.status === 'rejected' && deal.rejection ? (
@@ -240,10 +251,18 @@ export function ReviewScreen({ deal, salesforceMode }: { deal: Deal; salesforceM
             activeQuote={activeField?.sourceQuote ?? null}
             fileName={deal.document.fileName}
             pageCount={deal.document.pageCount}
+            hasSelection={Boolean(activePath)}
           />
         </div>
 
         <div className="scroll-pane min-w-0 lg:min-h-0 lg:overflow-y-auto lg:pr-1.5">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-rule pb-2">
+            <h2 className="text-xs font-semibold text-ink">Extracted data</h2>
+            <span className="text-2xs text-ink-muted">
+              {readOnly ? 'Approved — locked' : 'Click a field to see its source · click a value to edit'}
+            </span>
+          </div>
+
           {approved ? (
             <OmDraftPanel
               dealId={deal.id}
@@ -252,17 +271,35 @@ export function ReviewScreen({ deal, salesforceMode }: { deal: Deal; salesforceM
             />
           ) : null}
 
-          {SECTIONS.map((section) => (
+          {SECTIONS.map((section) => {
+            const style = SECTION_STYLES[section.key];
+            const SectionIcon = style.icon;
+            const fields = fieldsForSection(section.key);
+            const flagged = fields.filter((spec) => summary.needsAttention.includes(spec.path)).length;
+
+            return (
             <section key={section.key} className="mb-6">
-              <h2 className="mb-1.5 border-b border-rule px-3 pb-1.5 text-2xs font-semibold uppercase tracking-wider text-ink-muted">
-                {section.label}
-              </h2>
+              <header className="mb-2 flex items-center gap-2.5">
+                <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md ${style.chip}`}>
+                  <SectionIcon size={13} />
+                </span>
+                <h2 className={`text-2xs font-semibold uppercase tracking-wider ${style.label}`}>
+                  {section.label}
+                </h2>
+                {flagged > 0 ? (
+                  <span className="tnum rounded-full bg-amber-100 px-2 py-0.5 text-2xs font-medium text-amber-900">
+                    {flagged} to check
+                  </span>
+                ) : null}
+                <span aria-hidden className="ml-1 h-px flex-1 bg-rule" />
+              </header>
               <div className="space-y-0.5">
-                {fieldsForSection(section.key).map((spec) => (
+                {fields.map((spec) => (
                   <FieldRow
                     key={spec.path}
                     spec={spec}
                     field={getField(extraction, spec.path)!}
+                    activeClassName={style.activeRow}
                     original={getField(deal.originalExtraction ?? deal.extraction, spec.path)}
                     active={activePath === spec.path}
                     saving={savingPath === spec.path}
@@ -273,7 +310,8 @@ export function ReviewScreen({ deal, salesforceMode }: { deal: Deal; salesforceM
                 ))}
               </div>
             </section>
-          ))}
+            );
+          })}
         </div>
       </div>
 
@@ -327,7 +365,7 @@ function NeedsAttention({
         <TriangleAlert size={14} className="text-amber-700" />
         <span className="text-xs font-medium text-amber-900">
           Needs attention — <span className="tnum">{paths.length}</span> field
-          {paths.length === 1 ? '' : 's'} the AI could not state confidently
+          {paths.length === 1 ? '' : 's'} Artificer could not state confidently
         </span>
       </div>
       <div className="mt-2 flex flex-wrap gap-1.5">
@@ -377,8 +415,6 @@ function FooterBar({
   onReject: () => void;
   recordHref: string | null;
 }) {
-  const pct = Math.round((summary.high / summary.total) * 100);
-
   return (
     /* Sticky rather than fixed: it pins to the viewport while the page scrolls
        on narrow screens, and simply sits at the end of the flex column on a
@@ -416,21 +452,8 @@ function FooterBar({
       ) : null}
 
       <div className="mx-auto flex w-full max-w-[100rem] flex-wrap items-center gap-4 px-5 py-3.5 sm:px-8">
-        <div className="min-w-[16rem] flex-1">
-          <div className="flex items-baseline gap-2 text-sm text-ink">
-            <span className="tnum font-medium">
-              {summary.high} of {summary.total}
-            </span>
-            <span className="text-ink-muted">fields high confidence</span>
-            {summary.edited > 0 ? (
-              <span className="text-2xs text-ink-faint">
-                · <span className="tnum">{summary.edited}</span> edited
-              </span>
-            ) : null}
-          </div>
-          <div className="mt-1.5 h-1.5 w-full max-w-sm overflow-hidden rounded-full bg-rule" role="presentation">
-            <div className="h-full rounded-full bg-accent transition-[width] duration-300" style={{ width: `${pct}%` }} />
-          </div>
+        <div className="flex-1">
+          <ConfidenceMeter summary={summary} />
         </div>
 
         <div className="flex items-center gap-2">

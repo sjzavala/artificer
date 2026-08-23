@@ -83,8 +83,8 @@ async function main() {
     dealId: SAMPLE_DEAL_ID,
     actor: 'Artificer seed',
     action: 'extraction_completed',
-    summary: 'Extraction completed with claude-sonnet-4-6',
-    details: { model: 'claude-sonnet-4-6', inputTokens: 4_812, outputTokens: 2_137, seeded: true },
+    summary: 'Extraction completed by Artificer',
+    details: { engine: 'Artificer', inputTokens: 4_812, outputTokens: 2_137, seeded: true },
   });
 
   const s = summarise(sample.extraction);

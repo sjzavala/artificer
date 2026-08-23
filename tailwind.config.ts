@@ -30,6 +30,20 @@ const config: Config = {
           soft: '#eef4ef',
           ring: '#b9d2c3',
         },
+        // Dark chrome. A single deep band at the top stops the page reading as
+        // an undifferentiated sheet of white.
+        chrome: {
+          DEFAULT: '#151b22',
+          soft: '#1e2732',
+          line: '#2c3743',
+          text: '#c8d1dc',
+        },
+        // One hue per schema section. Functional, not decorative: in a
+        // twenty-four row list, colour is how you find your place again.
+        property: { DEFAULT: '#1d4ed8', soft: '#eff4ff', ring: '#bfd3fb' },
+        tenantc: { DEFAULT: '#6d28d9', soft: '#f5f1fe', ring: '#d5c6f7' },
+        leasec: { DEFAULT: '#b45309', soft: '#fdf5eb', ring: '#f2d7ae' },
+        econ: { DEFAULT: '#0f766e', soft: '#eefaf7', ring: '#b3ded7' },
       },
       fontFamily: {
         sans: ['var(--font-sans)', 'ui-sans-serif', 'system-ui', '-apple-system', 'sans-serif'],
@@ -52,7 +66,9 @@ const config: Config = {
         // A barely-there warm wash so a full page of white cards has something
         // to sit on. It should read as paper, never as a gradient.
         'paper-wash':
-          'radial-gradient(1200px 500px at 12% -8%, rgba(20, 83, 45, 0.045), transparent 60%), radial-gradient(900px 420px at 100% 0%, rgba(120, 113, 96, 0.05), transparent 55%)',
+          'radial-gradient(1100px 520px at 8% -10%, rgba(29, 78, 216, 0.06), transparent 62%), radial-gradient(900px 460px at 96% -4%, rgba(15, 118, 110, 0.06), transparent 58%), radial-gradient(700px 420px at 60% 100%, rgba(180, 83, 9, 0.035), transparent 60%)',
+        'chrome-sheen':
+          'linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0) 60%)',
       },
     },
   },

@@ -43,9 +43,9 @@ export async function POST(request: NextRequest) {
       dealId: deal.id,
       actor,
       action: 'om_draft_generated',
-      summary: `OM summary drafted with ${draft.model}`,
+      summary: 'OM summary drafted by Artificer',
       details: {
-        model: draft.model,
+        engine: 'Artificer',
         inputTokens: draft.inputTokens,
         outputTokens: draft.outputTokens,
         characters: draft.markdown.length,

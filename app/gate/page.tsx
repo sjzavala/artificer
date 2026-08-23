@@ -5,7 +5,7 @@ export const metadata = { title: 'Artificer — Access' };
 
 const STEPS = [
   { n: '01', label: 'Document in', text: 'An offering memo, lease or LOI.' },
-  { n: '02', label: 'Claude extracts', text: 'Every field cited to a passage.' },
+  { n: '02', label: 'Artificer extracts', text: 'Every field cited to a passage.' },
   { n: '03', label: 'A person decides', text: 'Nothing is written until you approve.' },
 ];
 

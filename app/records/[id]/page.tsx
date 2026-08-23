@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { ArrowLeft, Database } from 'lucide-react';
 import { AppShell } from '@/components/AppShell';
 import { StepMarker } from '@/components/StepMarker';
+import { PipelineStepper } from '@/components/PipelineStepper';
 import { MockSalesforceAdapter } from '@/lib/salesforce/mock';
 import { SOBJECT_LABELS, SOBJECT_ORDER } from '@/lib/salesforce/mapping';
 import type { RecordPayload, SObjectName } from '@/lib/salesforce/types';
@@ -32,8 +33,12 @@ export default async function RecordPage({ params }: { params: Promise<{ id: str
           <ArrowLeft size={13} /> Back to review
         </Link>
 
-        <div className="mt-4 overflow-hidden rounded-lg border border-slate-300 bg-white shadow-card">
-          <div className="border-b border-slate-200 bg-[#f3f6f9] px-6 py-4">
+        <div className="mt-4">
+          <PipelineStepper current="crm" done={['upload', 'review', 'approve', 'crm']} />
+        </div>
+
+        <div className="mt-5 overflow-hidden rounded-lg border border-slate-300 bg-white shadow-card">
+          <div className="border-b border-slate-200 bg-gradient-to-b from-[#eef3f9] to-[#f6f8fb] px-6 py-4">
             <div className="flex items-center gap-2 text-2xs uppercase tracking-wider text-slate-500">
               <Database size={13} />
               Deal

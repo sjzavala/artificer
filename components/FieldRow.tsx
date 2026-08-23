@@ -13,6 +13,7 @@ export function FieldRow({
   active,
   saving,
   readOnly,
+  activeClassName,
   onSelect,
   onCommit,
 }: {
@@ -22,6 +23,8 @@ export function FieldRow({
   active: boolean;
   saving: boolean;
   readOnly: boolean;
+  /** Section-tinted highlight, so a selected row is placed by colour too. */
+  activeClassName: string;
   onSelect: () => void;
   onCommit: (value: unknown) => void;
 }) {
@@ -48,14 +51,21 @@ export function FieldRow({
 
   const missing = field.value === null || field.value === undefined;
   const showsOriginal = field.edited && original && original.value !== field.value;
+  // A row needing a decision is marked in the margin, so triage does not depend
+  // on reading every confidence chip.
+  const flagged = field.confidence === 'low' || field.confidence === 'not_found';
 
   return (
     <div
       onClick={onSelect}
       className={`group relative grid cursor-pointer grid-cols-[minmax(0,11rem)_minmax(0,1fr)_auto] items-start gap-3 rounded-md border px-3 py-2.5 transition-colors ${
-        active ? 'border-accent-ring bg-accent-soft' : 'border-transparent hover:border-rule hover:bg-white'
+        active ? activeClassName : 'border-transparent hover:border-rule hover:bg-white'
       }`}
     >
+      {flagged && !readOnly ? (
+        <span aria-hidden className="absolute inset-y-1.5 left-0 w-[3px] rounded-full bg-amber-400" />
+      ) : null}
+
       <div className="pt-0.5">
         <div className="text-xs font-medium text-ink">{spec.label}</div>
         {field.edited ? (
@@ -127,7 +137,7 @@ export function FieldRow({
 
         {showsOriginal ? (
           <div className="mt-1 hidden text-2xs text-ink-faint group-hover:block">
-            AI extracted: <span className="tnum">{formatValue(original?.value ?? null, spec)}</span>
+            Artificer extracted: <span className="tnum">{formatValue(original?.value ?? null, spec)}</span>
           </div>
         ) : null}
 

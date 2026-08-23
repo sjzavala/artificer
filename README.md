@@ -1,6 +1,6 @@
 # Artificer
 
-Artificer is a **tool, not a chatbot**: you drop in a net-lease deal document, Claude
+Artificer is a **tool, not a chatbot**: you drop in a net-lease deal document, it
 extracts the structured deal data with a confidence grade and a verbatim source
 citation for every field, and you review it side by side with the document.
 
@@ -16,7 +16,7 @@ There is no chat interface anywhere in the product, by design.
 ```mermaid
 flowchart TD
     A["📄 Deal document<br/>offering memo · lease · LOI"] --> B["Text extraction<br/><i>pdfjs — anchored paragraphs</i>"]
-    B --> C["Claude extraction<br/><i>24 net-lease fields</i>"]
+    B --> C["Artificer extraction<br/><i>24 net-lease fields</i>"]
     C --> D{"Valid against<br/>the schema?"}
     D -- no --> E["Retry once with<br/>the validation errors"]
     E --> D
@@ -62,11 +62,21 @@ There is no path from a document to Salesforce that does not pass through it.
 | Step | What happens | Why it is built that way |
 | --- | --- | --- |
 | **Upload** | PDF text is extracted and split into paragraphs with stable anchor ids. | Anchors, not pixel coordinates — a citation must land on the right passage every time, in every browser. |
-| **Extract** | One Claude call per chunk, strict JSON, validated with zod. One repair retry on failure. | The model is asked for a contract, not for prose. Failing twice surfaces a clean error rather than half-parsed data. |
+| **Extract** | One model call per chunk, strict JSON, validated with zod. One repair retry on failure. | The model is asked for a contract, not for prose. Failing twice surfaces a clean error rather than half-parsed data. |
 | **Verify** | Every quote is located in the document ourselves; the model's own anchor is treated as a hint. | A citation nobody checked is decoration. A quote that cannot be found loses its location *and* its high-confidence grade. |
 | **Review** | Document left, fields right. Clicking a field scrolls to and highlights its source. | Checking a claim should cost one click. That is the whole product. |
 | **Approve** | A modal states the objects and field counts about to be written, then writes. | Nobody should be able to say afterwards that they did not know what would happen. |
 | **Draft** | An OM summary generated from the *approved record*, never the original document. | The draft can only contain values a person signed off on. |
+
+---
+
+### A note on naming
+
+The product surface says **Artificer** throughout — the pipeline stage, the audit
+entries, the provenance line on a reviewed deal. The underlying model is named
+only where it has to be literally true: the `ANTHROPIC_MODEL` variable, the
+engineering notes below, and `extractionMeta` on each stored deal, which keeps
+the model and token counts for anyone debugging an extraction.
 
 ---
 
@@ -156,10 +166,10 @@ flowchart LR
     BLOB["BlobStore<br/><i>private Vercel Blob</i>"]
     MOCK["MockSalesforceAdapter<br/><i>default</i>"]
     REAL["RealSalesforceAdapter<br/><i>jsforce</i>"]
-    CLAUDE(["Anthropic API"])
+    MODEL(["Anthropic API"])
 
     UI --> MW --> API
-    API --> EX --> CLAUDE
+    API --> EX --> MODEL
     API --> STORE
     API --> SF
     SCHEMA -.->|"drives the prompt"| EX
@@ -171,7 +181,7 @@ flowchart LR
     SF --> REAL
 
     style SCHEMA fill:#eef4ef,stroke:#14532d,color:#14532d
-    style CLAUDE fill:#f4f3f0,stroke:#d5d2cb,color:#16191f
+    style MODEL fill:#f4f3f0,stroke:#d5d2cb,color:#16191f
     style STORE fill:#fff8e6,stroke:#e0c675,color:#7a5c05
     style SF fill:#fff8e6,stroke:#e0c675,color:#7a5c05
 ```
@@ -191,7 +201,7 @@ app/                    Next.js App Router — pages and API routes
   api/                  extract · gate · field · approve · reject · om-draft
 components/             hand-styled React, no UI library
 lib/
-  extraction/           pdf → paragraphs → Claude → validated schema → anchors
+  extraction/           pdf → paragraphs → model → validated schema → anchors
   salesforce/           adapter interface, mock + real, field mapping
   store/                storage interface, local + blob
   audit.ts              append-only log
@@ -204,7 +214,7 @@ scripts/                seed, reset, diagnostics
 tests/                  vitest
 ```
 
-Every Claude call happens in a server-side API route. The API key is never
+Every model call happens in a server-side API route. The API key is never
 present in a client bundle.
 
 ---

@@ -77,9 +77,9 @@ async function main() {
     dealId: deal.id,
     actor: 'Artificer seed',
     action: 'extraction_completed',
-    summary: 'Extraction completed with claude-sonnet-4-6',
+    summary: 'Extraction completed by Artificer',
     details: {
-      model: deal.extractionMeta.model,
+      engine: 'Artificer',
       inputTokens: deal.extractionMeta.inputTokens,
       outputTokens: deal.extractionMeta.outputTokens,
       seeded: true,

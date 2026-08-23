@@ -93,9 +93,9 @@ export async function POST(request: NextRequest) {
       dealId,
       actor,
       action: 'extraction_completed',
-      summary: `Extraction completed with ${meta.model}`,
+      summary: 'Extraction completed by Artificer',
       details: {
-        model: meta.model,
+        engine: 'Artificer',
         inputTokens: meta.inputTokens,
         outputTokens: meta.outputTokens,
         durationMs: meta.durationMs,

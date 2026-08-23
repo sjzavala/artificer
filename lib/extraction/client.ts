@@ -176,7 +176,7 @@ async function extractChunk(
   }
 
   throw new ExtractionError(
-    'Claude returned data that did not match the deal schema, twice. The document may not be a net-lease deal document.',
+    'Artificer could not read this document into the deal schema, after two attempts. It may not be a net-lease deal document.',
     lastErrors,
   );
 }

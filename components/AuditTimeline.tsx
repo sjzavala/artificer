@@ -64,8 +64,17 @@ export function AuditTimeline({ entries }: { entries: AuditEntry[] }) {
   );
 }
 
+/**
+ * Keys recorded for engineering but not shown on the timeline. The vendor model
+ * identifier is one of them: the audit record keeps it, while a reviewer reading
+ * the trail sees the product that acted, not the model behind it.
+ */
+const HIDDEN_DETAIL_KEYS = new Set(['model']);
+
 function Details({ details }: { details: Record<string, unknown> }) {
-  const rows = Object.entries(details).filter(([, v]) => v !== null && v !== undefined && v !== '');
+  const rows = Object.entries(details).filter(
+    ([k, v]) => !HIDDEN_DETAIL_KEYS.has(k) && v !== null && v !== undefined && v !== '',
+  );
   if (rows.length === 0) return null;
 
   return (
