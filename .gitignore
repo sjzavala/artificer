@@ -1,0 +1,44 @@
+# dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# next.js
+.next/
+out/
+next-env.d.ts
+
+# production
+build/
+dist/
+
+# local data store (never commit demo/deal data)
+/data/
+/public/uploads/
+
+# env files — never commit secrets
+.env
+.env.local
+.env.*.local
+.env.production
+.env.development
+
+# eval output
+evals/results/
+evals/samples/*.pdf
+
+# vercel
+.vercel
+
+# testing
+coverage/
+
+# misc
+.DS_Store
+*.pem
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.idea/
+.vscode/
+*.tsbuildinfo
