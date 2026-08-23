@@ -69,28 +69,45 @@ export function UploadDropzone() {
         }}
         onDragLeave={() => setDragging(false)}
         onDrop={onDrop}
-        className={`rounded-lg border border-dashed bg-panel px-6 py-9 text-center transition-colors ${
-          dragging ? 'border-accent bg-accent-soft' : 'border-rule'
-        } ${busyFile ? 'opacity-90' : ''}`}
+        className={`rounded-xl border border-dashed px-6 py-10 text-center transition-all ${
+          dragging
+            ? 'border-accent bg-accent-soft shadow-card'
+            : 'border-rule-strong bg-panel/70 hover:border-ink-faint hover:bg-panel'
+        }`}
       >
         {busyFile ? (
           <div className="flex flex-col items-center gap-2">
-            <Loader2 size={20} className="animate-spin text-accent" />
+            <span className="mb-1 flex h-10 w-10 items-center justify-center rounded-full border border-accent-ring bg-accent-soft">
+              <Loader2 size={17} className="animate-spin text-accent" />
+            </span>
             <p className="text-sm font-medium text-ink">{STAGES[stage]}…</p>
-            <p className="text-xs text-ink-muted">{busyFile}</p>
+            <p className="max-w-[18rem] truncate text-xs text-ink-muted">{busyFile}</p>
+
+            {/* Named stages, not a bare spinner: extraction genuinely takes a
+                while, and silence reads as a hang. */}
+            <ol className="mt-2.5 flex items-center gap-1.5" aria-hidden>
+              {STAGES.map((_, i) => (
+                <li
+                  key={i}
+                  className={`h-1 rounded-full transition-all duration-500 ${
+                    i <= stage ? 'w-7 bg-accent' : 'w-4 bg-rule'
+                  }`}
+                />
+              ))}
+            </ol>
             <p className="mt-1 text-2xs text-ink-faint">A long offering memo can take a minute.</p>
           </div>
         ) : (
           <div className="flex flex-col items-center gap-2">
-            <FileUp size={20} className="text-ink-faint" />
-            <p className="text-sm text-ink">
-              Drop an offering memo, lease or LOI here
-            </p>
-            <p className="text-xs text-ink-muted">PDF, up to 20 MB</p>
+            <span className="mb-1 flex h-10 w-10 items-center justify-center rounded-full border border-rule bg-sunken">
+              <FileUp size={17} className="text-ink-muted" />
+            </span>
+            <p className="text-sm font-medium text-ink">Drop a deal document here</p>
+            <p className="text-xs text-ink-muted">Offering memo, lease or LOI — PDF, up to 20 MB</p>
             <button
               type="button"
               onClick={() => inputRef.current?.click()}
-              className="focus-ring mt-2 rounded-md border border-rule bg-white px-3 py-1.5 text-sm font-medium text-ink transition-colors hover:border-ink-faint"
+              className="focus-ring mt-3 rounded-lg border border-rule-strong bg-white px-3.5 py-2 text-sm font-medium text-ink shadow-card transition-colors hover:border-ink-faint"
             >
               Choose a file
             </button>

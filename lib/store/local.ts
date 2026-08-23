@@ -35,20 +35,41 @@ export class LocalFileStore implements Store {
     await fs.rename(tmp, target);
   }
 
+  /**
+   * Walks subdirectories and returns file keys only.
+   *
+   * A flat readdir returns directory entries too, so a nested prefix like
+   * "salesforce/" yielded "salesforce/records" as if it were a key — and
+   * deleting it tried to unlink a directory. The blob store has a flat
+   * namespace and never had this problem, which is exactly the kind of
+   * divergence the shared contract tests exist to catch.
+   */
   async list(prefix: string): Promise<string[]> {
-    const dir = path.join(this.root, path.dirname(`${prefix}x`));
-    let entries: string[];
-    try {
-      entries = await fs.readdir(dir);
-    } catch (err) {
-      if ((err as NodeJS.ErrnoException).code === 'ENOENT') return [];
-      throw err;
-    }
-    const dirKey = path.dirname(`${prefix}x`);
-    return entries
-      .map((name) => (dirKey === '.' ? name : `${dirKey}/${name}`))
-      .filter((key) => key.startsWith(prefix) && !key.endsWith('.tmp'))
-      .sort();
+    const keys: string[] = [];
+
+    const walk = async (relative: string): Promise<void> => {
+      const absolute = relative ? path.join(this.root, relative) : this.root;
+      let entries;
+      try {
+        entries = await fs.readdir(absolute, { withFileTypes: true });
+      } catch (err) {
+        if ((err as NodeJS.ErrnoException).code === 'ENOENT') return;
+        throw err;
+      }
+
+      for (const entry of entries) {
+        const key = relative ? `${relative}/${entry.name}` : entry.name;
+        if (entry.isDirectory()) {
+          // Descend only where a match could still live under this prefix.
+          if (key.startsWith(prefix) || prefix.startsWith(key)) await walk(key);
+        } else if (key.startsWith(prefix) && !key.endsWith('.tmp')) {
+          keys.push(key);
+        }
+      }
+    };
+
+    await walk('');
+    return keys.sort();
   }
 
   async remove(key: string): Promise<void> {

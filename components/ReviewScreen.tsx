@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, CheckCircle2, ExternalLink, Loader2, TriangleAlert, XCircle } from 'lucide-react';
@@ -8,8 +8,10 @@ import { DocumentPane } from './DocumentPane';
 import { FieldRow } from './FieldRow';
 import { ApprovalModal } from './ApprovalModal';
 import { StatusPill } from './ConfidenceChip';
+import { OmDraftPanel } from './OmDraftPanel';
 import { buildPayloads, payloadFieldCounts } from '@/lib/salesforce/mapping';
 import { requireReviewerName } from '@/lib/reviewer';
+import { completeStep } from '@/lib/walkthrough';
 import { formatTimestamp } from '@/lib/format';
 import {
   FIELD_SPECS_BY_PATH,
@@ -47,11 +49,26 @@ export function ReviewScreen({ deal, salesforceMode }: { deal: Deal; salesforceM
   const [rejecting, setRejecting] = useState(false);
   const [rejectError, setRejectError] = useState<string | null>(null);
 
+  // Walkthrough progress is driven by what the reviewer actually does, so the
+  // signals live at the points where those things genuinely happen.
+  useEffect(() => {
+    completeStep('open-deal');
+  }, []);
+
   const approved = deal.status === 'approved' || Boolean(written);
   const readOnly = approved;
 
   const summary = useMemo(() => summarise(extraction), [extraction]);
   const activeField = activePath ? getField(extraction, activePath) : undefined;
+
+  const selectField = useCallback(
+    (path: string) => {
+      setActivePath(path);
+      // Only counts when there is a citation to land on — that is the point.
+      if (getField(extraction, path)?.sourceLocation) completeStep('check-citation');
+    },
+    [extraction],
+  );
 
   const payloadCounts = useMemo(
     () => payloadFieldCounts(buildPayloads({ ...deal, extraction })),
@@ -81,6 +98,7 @@ export function ReviewScreen({ deal, salesforceMode }: { deal: Deal; salesforceM
           return;
         }
         setExtraction((current) => withField(current, path, payload.field!));
+        completeStep('resolve-flag');
         router.refresh();
       } catch {
         setEditError('That edit could not be saved. Check your connection.');
@@ -110,6 +128,7 @@ export function ReviewScreen({ deal, salesforceMode }: { deal: Deal; salesforceM
       }
       setWritten(payload.salesforce);
       setModalOpen(false);
+      completeStep('approve');
       router.refresh();
     } catch {
       setApproveError('The write could not be completed.');
@@ -203,7 +222,7 @@ export function ReviewScreen({ deal, salesforceMode }: { deal: Deal; salesforceM
         ) : null}
 
         {summary.needsAttention.length > 0 && !approved ? (
-          <NeedsAttention paths={summary.needsAttention} activePath={activePath} onSelect={setActivePath} />
+          <NeedsAttention paths={summary.needsAttention} activePath={activePath} onSelect={selectField} />
         ) : null}
 
         {editError ? (
@@ -225,6 +244,14 @@ export function ReviewScreen({ deal, salesforceMode }: { deal: Deal; salesforceM
         </div>
 
         <div className="scroll-pane min-w-0 lg:min-h-0 lg:overflow-y-auto lg:pr-1.5">
+          {approved ? (
+            <OmDraftPanel
+              dealId={deal.id}
+              existing={deal.omDraft ?? null}
+              fileName={deal.document.fileName}
+            />
+          ) : null}
+
           {SECTIONS.map((section) => (
             <section key={section.key} className="mb-6">
               <h2 className="mb-1.5 border-b border-rule px-3 pb-1.5 text-2xs font-semibold uppercase tracking-wider text-ink-muted">
@@ -240,7 +267,7 @@ export function ReviewScreen({ deal, salesforceMode }: { deal: Deal; salesforceM
                     active={activePath === spec.path}
                     saving={savingPath === spec.path}
                     readOnly={readOnly}
-                    onSelect={() => setActivePath(spec.path)}
+                    onSelect={() => selectField(spec.path)}
                     onCommit={(value) => void commitField(spec.path, value)}
                   />
                 ))}

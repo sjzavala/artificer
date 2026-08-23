@@ -2,10 +2,10 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ArrowLeft, Database } from 'lucide-react';
 import { AppShell } from '@/components/AppShell';
+import { StepMarker } from '@/components/StepMarker';
 import { MockSalesforceAdapter } from '@/lib/salesforce/mock';
 import { SOBJECT_LABELS, SOBJECT_ORDER } from '@/lib/salesforce/mapping';
 import type { RecordPayload, SObjectName } from '@/lib/salesforce/types';
-import { selectedStoreKind } from '@/lib/store';
 import { salesforceMode } from '@/lib/salesforce';
 import { formatTimestamp } from '@/lib/format';
 
@@ -22,8 +22,9 @@ export default async function RecordPage({ params }: { params: Promise<{ id: str
   if (!set) notFound();
 
   return (
-    <AppShell active="deals" storeKind={selectedStoreKind()} salesforceMode={salesforceMode()}>
+    <AppShell active="deals" salesforceMode={salesforceMode()}>
       <main className="mx-auto w-full max-w-5xl px-5 py-8 sm:px-8">
+        <StepMarker step="view-record" />
         <Link
           href={`/deals/${set.dealId}`}
           className="focus-ring inline-flex items-center gap-1.5 rounded text-xs text-ink-muted transition-colors hover:text-ink"

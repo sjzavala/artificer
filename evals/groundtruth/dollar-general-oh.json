@@ -1,0 +1,69 @@
+{
+  "id": "dollar-general-oh",
+  "file": "dollar-general-mount-vernon-oh.pdf",
+  "notes": "Absolute NNN retail. The memo states building size twice and disagrees with itself (9,100 SF on the summary page, 9,026 SF in the property description), so either is accepted and low confidence is the correct grade. No credit rating is stated anywhere.",
+  "fields": {
+    "property.streetAddress": "1487 Coshocton Avenue",
+    "property.city": "Mount Vernon",
+    "property.state": "OH",
+    "property.zip": "43050",
+    "property.propertyType": "retail",
+    "property.buildingSf": {
+      "any": [
+        9100,
+        9026
+      ]
+    },
+    "property.lotSizeAcres": 1.24,
+    "property.yearBuilt": 2019,
+    "tenant.tradeName": "Dollar General",
+    "tenant.legalEntityName": "Dolgencorp, LLC",
+    "tenant.guarantorName": "Dollar General Corporation",
+    "tenant.guarantorType": "corporate",
+    "tenant.creditRating": null,
+    "lease.leaseType": "absolute NNN",
+    "lease.commencementDate": "2019-10-01",
+    "lease.expirationDate": "2034-09-30",
+    "lease.remainingTermYears": 8.1,
+    "lease.renewalOptions": {
+      "contains": [
+        "4",
+        "5"
+      ]
+    },
+    "lease.rentEscalations": {
+      "contains": [
+        "10",
+        "option"
+      ]
+    },
+    "lease.landlordResponsibilities": {
+      "any": [
+        {
+          "contains": [
+            "none"
+          ]
+        },
+        {
+          "contains": [
+            "no responsibilit"
+          ]
+        },
+        {
+          "contains": [
+            "zero landlord"
+          ]
+        }
+      ]
+    },
+    "economics.askingPrice": 1842000,
+    "economics.annualBaseRent": 124335,
+    "economics.capRate": 6.75,
+    "economics.pricePerSf": {
+      "any": [
+        202.42,
+        204.08
+      ]
+    }
+  }
+}

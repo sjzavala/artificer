@@ -48,12 +48,13 @@ export function ApprovalModal({
   const total = SOBJECT_ORDER.reduce((n, name) => n + (fieldCounts[name] ?? 0), 0);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/25 px-5 py-10 backdrop-blur-[2px]">
+    /* z-[60] puts it above the walkthrough panel: a confirmation dialog must own the screen. */
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-ink/25 px-5 py-10 backdrop-blur-[2px]">
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="approve-title"
-        className="w-full max-w-lg rounded-lg border border-rule bg-panel shadow-lifted"
+        className="rise w-full max-w-lg rounded-xl border border-rule bg-panel shadow-lifted"
       >
         <header className="flex items-start justify-between gap-4 border-b border-rule px-6 py-4">
           <div>

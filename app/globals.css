@@ -13,15 +13,34 @@ body {
 
 body {
   background-color: theme('colors.paper');
+  background-image: theme('backgroundImage.paper-wash');
+  background-attachment: fixed;
   color: theme('colors.ink.DEFAULT');
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+  font-feature-settings: 'cv05' 1, 'ss01' 1;
 }
 
 /* Money and measurements line up in columns; this is a finance tool. */
 .tnum {
   font-variant-numeric: tabular-nums;
   font-feature-settings: 'tnum' 1;
+}
+
+.display {
+  font-family: theme('fontFamily.serif');
+  letter-spacing: -0.015em;
+}
+
+/* Small-caps section labels — the visual grammar of a term sheet. */
+.eyebrow {
+  font-size: 0.6875rem;
+  line-height: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: theme('colors.ink.faint');
 }
 
 /* The provenance highlight. Deliberately the warmest thing on the page so the
@@ -41,12 +60,31 @@ mark.provenance.is-active {
 
 @keyframes anchor-pulse {
   0% { background-color: rgba(251, 224, 138, 0); }
-  30% { background-color: rgba(251, 224, 138, 0.55); }
+  30% { background-color: rgba(251, 224, 138, 0.5); }
   100% { background-color: rgba(251, 224, 138, 0); }
 }
 
 .anchor-pulse {
   animation: anchor-pulse 1200ms ease-out;
+}
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+.rise {
+  animation: rise 260ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rise,
+  .anchor-pulse {
+    animation: none;
+  }
+  * {
+    scroll-behavior: auto !important;
+  }
 }
 
 /* Restrained, consistent focus treatment across inputs and buttons. */
@@ -57,16 +95,26 @@ mark.provenance.is-active {
 
 .scroll-pane {
   scrollbar-width: thin;
-  scrollbar-color: #cbd5e1 transparent;
+  scrollbar-color: #cfcbc3 transparent;
 }
 
 .scroll-pane::-webkit-scrollbar {
-  width: 10px;
+  width: 11px;
 }
 
 .scroll-pane::-webkit-scrollbar-thumb {
-  background-color: #d7dbd6;
+  background-color: #d8d4cc;
   border-radius: 999px;
   border: 3px solid transparent;
   background-clip: content-box;
+}
+
+.scroll-pane::-webkit-scrollbar-thumb:hover {
+  background-color: #c4bfb5;
+}
+
+/* Hairline rule used under section headers and between list rows. */
+.hairline {
+  background-image: linear-gradient(to right, theme('colors.rule.strong'), theme('colors.rule.DEFAULT') 40%, transparent);
+  height: 1px;
 }

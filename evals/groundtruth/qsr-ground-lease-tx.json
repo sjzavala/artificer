@@ -1,0 +1,59 @@
+{
+  "id": "qsr-ground-lease-tx",
+  "file": "qsr-ground-lease-round-rock-tx.pdf",
+  "notes": "Absolute NNN ground lease with a corporate guaranty. The memo states explicitly that no rating agency covers the tenant, so a credit rating here is a hallucination rather than a miss. Remaining term is never stated and cannot be computed without today's date.",
+  "fields": {
+    "property.streetAddress": "3320 Gattis School Road",
+    "property.city": "Round Rock",
+    "property.state": "TX",
+    "property.zip": "78664",
+    "property.propertyType": "retail",
+    "property.buildingSf": 4980,
+    "property.lotSizeAcres": 1.38,
+    "property.yearBuilt": 2022,
+    "tenant.tradeName": "Chick-fil-A",
+    "tenant.legalEntityName": "Chick-fil-A, Inc.",
+    "tenant.guarantorName": "Chick-fil-A, Inc.",
+    "tenant.guarantorType": "corporate",
+    "tenant.creditRating": null,
+    "lease.leaseType": "absolute NNN",
+    "lease.commencementDate": "2022-03-15",
+    "lease.expirationDate": "2042-03-31",
+    "lease.remainingTermYears": null,
+    "lease.renewalOptions": {
+      "contains": [
+        "5",
+        "5"
+      ]
+    },
+    "lease.rentEscalations": {
+      "contains": [
+        "10",
+        "5"
+      ]
+    },
+    "lease.landlordResponsibilities": {
+      "any": [
+        {
+          "contains": [
+            "none"
+          ]
+        },
+        {
+          "contains": [
+            "no responsibilit"
+          ]
+        },
+        {
+          "contains": [
+            "zero landlord"
+          ]
+        }
+      ]
+    },
+    "economics.askingPrice": 4310000,
+    "economics.annualBaseRent": 215500,
+    "economics.capRate": 5.0,
+    "economics.pricePerSf": 865.46
+  }
+}

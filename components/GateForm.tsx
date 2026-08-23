@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowRight, Loader2 } from 'lucide-react';
+import { ArrowRight, Loader2, LockKeyhole } from 'lucide-react';
 
 export function GateForm({ next }: { next?: string }) {
   const router = useRouter();
@@ -44,7 +44,16 @@ export function GateForm({ next }: { next?: string }) {
 
   return (
     <form onSubmit={onSubmit} noValidate>
-      <label htmlFor="access-code" className="block text-xs font-medium uppercase tracking-wider text-ink-muted">
+      <div className="flex items-center gap-2">
+        <LockKeyhole size={14} className="text-ink-faint" />
+        <span className="eyebrow">Access code</span>
+      </div>
+
+      <h1 className="display mt-3 text-xl font-semibold tracking-tightest text-ink">
+        Enter your code to continue
+      </h1>
+
+      <label htmlFor="access-code" className="sr-only">
         Access code
       </label>
 
@@ -58,7 +67,9 @@ export function GateForm({ next }: { next?: string }) {
         onChange={(e) => setCode(e.target.value)}
         aria-invalid={Boolean(error)}
         aria-describedby={error ? 'access-error' : undefined}
-        className="focus-ring mt-2 w-full rounded-md border border-rule bg-white px-3 py-2.5 font-mono text-[0.9375rem] tracking-[0.18em] text-ink placeholder:tracking-normal placeholder:font-sans placeholder:text-ink-faint"
+        className={`focus-ring mt-5 w-full rounded-lg border bg-white px-3.5 py-3 font-mono text-[0.9375rem] tracking-[0.2em] text-ink transition-colors placeholder:font-sans placeholder:tracking-normal placeholder:text-ink-faint ${
+          error ? 'border-red-300' : 'border-rule-strong hover:border-ink-faint'
+        }`}
         placeholder="Enter code"
       />
 
@@ -71,11 +82,13 @@ export function GateForm({ next }: { next?: string }) {
       <button
         type="submit"
         disabled={pending || !code.trim()}
-        className="focus-ring mt-5 inline-flex w-full items-center justify-center gap-2 rounded-md bg-accent px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-40"
+        className="focus-ring group mt-4 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-accent px-4 py-3 text-sm font-medium text-white shadow-inset transition-all hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-35"
       >
-        {pending ? <Loader2 size={16} className="animate-spin" /> : null}
+        {pending ? <Loader2 size={15} className="animate-spin" /> : null}
         {pending ? 'Checking' : 'Enter'}
-        {!pending ? <ArrowRight size={16} /> : null}
+        {!pending ? (
+          <ArrowRight size={15} className="transition-transform group-hover:translate-x-0.5" />
+        ) : null}
       </button>
     </form>
   );

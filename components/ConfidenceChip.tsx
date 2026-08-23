@@ -3,22 +3,22 @@ import type { Confidence } from '@/shared/schema';
 const STYLES: Record<Confidence, { label: string; className: string; title: string }> = {
   high: {
     label: 'High',
-    className: 'bg-emerald-50 text-emerald-800 ring-emerald-200',
+    className: 'bg-emerald-50/80 text-emerald-800 ring-emerald-200/80',
     title: 'Stated directly in the document',
   },
   medium: {
     label: 'Medium',
-    className: 'bg-amber-50 text-amber-800 ring-amber-200',
+    className: 'bg-amber-50/80 text-amber-800 ring-amber-200/80',
     title: 'Derived or lightly interpreted from the document',
   },
   low: {
     label: 'Low',
-    className: 'bg-red-50 text-red-800 ring-red-200',
+    className: 'bg-red-50/80 text-red-800 ring-red-200/80',
     title: 'Ambiguous or conflicting in the document — check this',
   },
   not_found: {
     label: 'Not found',
-    className: 'bg-slate-100 text-slate-600 ring-slate-200',
+    className: 'bg-sunken text-ink-muted ring-rule-strong',
     title: 'The document does not state this',
   },
 };
@@ -39,7 +39,7 @@ export function StatusPill({ status }: { status: 'extracted' | 'approved' | 'rej
   const map = {
     extracted: { label: 'Needs review', className: 'bg-slate-100 text-slate-700 ring-slate-200' },
     approved: { label: 'Approved', className: 'bg-accent-soft text-accent ring-accent-ring' },
-    rejected: { label: 'Rejected', className: 'bg-red-50 text-red-800 ring-red-200' },
+    rejected: { label: 'Rejected', className: 'bg-red-50/80 text-red-800 ring-red-200/80' },
   } as const;
   const style = map[status];
   return (

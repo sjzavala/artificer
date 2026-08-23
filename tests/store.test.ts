@@ -72,6 +72,28 @@ function contractTests(name: string, create: () => Promise<Store>) {
       expect(await store.list('salesforce/records/')).toEqual([]);
     });
 
+    it('lists keys nested several levels under a prefix', async () => {
+      await store.write('salesforce/records/a04abc.json', { id: 'a04abc' });
+      await store.write('salesforce/by-hash/deadbeef.json', { recordId: 'a04abc' });
+      await store.write('deals/d_1.json', {});
+
+      // Every key must be a real key — never an intermediate directory, which
+      // would blow up the moment a caller tried to remove it.
+      expect(await store.list('salesforce/')).toEqual([
+        'salesforce/by-hash/deadbeef.json',
+        'salesforce/records/a04abc.json',
+      ]);
+    });
+
+    it('can clear everything under a nested prefix', async () => {
+      await store.write('salesforce/records/a04abc.json', {});
+      await store.write('salesforce/by-hash/deadbeef.json', {});
+
+      for (const key of await store.list('salesforce/')) await store.remove(key);
+
+      expect(await store.list('salesforce/')).toEqual([]);
+    });
+
     it('removes a key, and removing again is not an error', async () => {
       await store.write('deals/d_1.json', { v: 1 });
       await store.remove('deals/d_1.json');

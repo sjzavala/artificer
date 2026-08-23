@@ -2,7 +2,6 @@ import Link from 'next/link';
 import { AppShell } from '@/components/AppShell';
 import { readAudit } from '@/lib/audit';
 import { listDealSummaries } from '@/lib/deals';
-import { selectedStoreKind } from '@/lib/store';
 import { salesforceMode } from '@/lib/salesforce';
 import { AuditTimeline } from '@/components/AuditTimeline';
 
@@ -18,7 +17,7 @@ export default async function AuditPage({
   const [entries, deals] = await Promise.all([readAudit(dealFilter), listDealSummaries()]);
 
   return (
-    <AppShell active="audit" storeKind={selectedStoreKind()} salesforceMode={salesforceMode()}>
+    <AppShell active="audit" salesforceMode={salesforceMode()}>
       <main className="mx-auto w-full max-w-5xl px-5 py-10 sm:px-8">
         <div className="max-w-2xl">
           <h1 className="text-2xl font-semibold tracking-tight text-ink">Audit</h1>

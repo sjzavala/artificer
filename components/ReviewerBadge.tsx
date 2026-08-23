@@ -44,7 +44,7 @@ export function ReviewerBadge() {
           if (e.key === 'Enter') commit((e.target as HTMLInputElement).value);
           if (e.key === 'Escape') setEditing(false);
         }}
-        className="focus-ring w-40 rounded-md border border-rule bg-white px-2.5 py-1 text-sm text-ink"
+        className="focus-ring w-44 rounded-full border border-rule-strong bg-white px-3.5 py-1.5 text-sm text-ink"
       />
     );
   }
@@ -54,10 +54,27 @@ export function ReviewerBadge() {
       type="button"
       onClick={() => setEditing(true)}
       title="Set the name recorded in the audit log"
-      className="focus-ring inline-flex items-center gap-1.5 rounded-md border border-rule bg-white px-2.5 py-1 text-sm text-ink-muted transition-colors hover:text-ink"
+      className="focus-ring inline-flex items-center gap-2 rounded-full border border-rule bg-panel py-1 pl-1 pr-3 text-sm text-ink-muted transition-colors hover:border-rule-strong hover:text-ink"
     >
-      <UserRound size={14} />
-      {name || 'Set reviewer'}
+      <span
+        aria-hidden
+        className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-2xs font-semibold ${
+          name ? 'bg-accent text-white' : 'bg-sunken text-ink-faint'
+        }`}
+      >
+        {name ? initials(name) : <UserRound size={12} />}
+      </span>
+      <span className="max-w-[9rem] truncate">{name || 'Set reviewer'}</span>
     </button>
   );
+}
+
+/** Up to two initials, so the badge stays a fixed size regardless of name length. */
+function initials(name: string): string {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? '')
+    .join('');
 }

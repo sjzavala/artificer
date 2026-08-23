@@ -1,0 +1,34 @@
+{
+  "id": "industrial-sale-leaseback-az",
+  "file": "industrial-sale-leaseback-tempe-az.pdf",
+  "notes": "NN sale-leaseback. The hard cases here are absences: no guarantor is mentioned anywhere in the document, and the memo says outright that the tenant is unrated. Reporting either is a hallucination. The landlord retains roof and structure, so 'absolute NNN' would be wrong.",
+  "fields": {
+    "property.streetAddress": "2245 West Elliot Road",
+    "property.city": "Tempe",
+    "property.state": "AZ",
+    "property.zip": "85284",
+    "property.propertyType": "industrial",
+    "property.buildingSf": 84300,
+    "property.lotSizeAcres": 5.62,
+    "property.yearBuilt": 2004,
+
+    "tenant.tradeName": "Sonoran Precision Components",
+    "tenant.legalEntityName": "Sonoran Precision Components, LLC",
+    "tenant.guarantorName": null,
+    "tenant.guarantorType": null,
+    "tenant.creditRating": null,
+
+    "lease.leaseType": "NN",
+    "lease.commencementDate": "2027-01-01",
+    "lease.expirationDate": "2041-12-31",
+    "lease.remainingTermYears": null,
+    "lease.renewalOptions": { "contains": ["2", "5"] },
+    "lease.rentEscalations": { "contains": ["2.5", "annual"] },
+    "lease.landlordResponsibilities": { "contains": ["roof", "structure"] },
+
+    "economics.askingPrice": 12400000,
+    "economics.annualBaseRent": 806000,
+    "economics.capRate": 6.5,
+    "economics.pricePerSf": 147.09
+  }
+}
