@@ -31,7 +31,7 @@ flowchart TD
 
     K -- Reject --> L["Rejected<br/><i>reason recorded</i>"]
     K -- Approve --> M["Confirmation<br/><i>exactly what will be written</i>"]
-    M --> N["💾 Salesforce write<br/>Property · Tenant · Lease · Deal"]
+    M --> N["💾 Salesforce write<br/>Property · Opportunity"]
     N --> O["🗂️ CRM record view"]
     N --> P["📝 OM summary draft<br/><i>from the approved record</i>"]
 
@@ -123,6 +123,7 @@ each step as you actually perform it.
 | `npm run generate-samples` | Renders the three sample offering memos to PDF. |
 | `npm run eval` | Scores extraction against ground truth. |
 | `npm run check-store` | Exercises the live storage adapter end to end. |
+| `npm run generate-sf-docs` | Regenerates `docs/salesforce-schema.md` from the mapping table. |
 | `npm run check-model` | Confirms `ANTHROPIC_MODEL` is reachable with the configured key. |
 | `npm run inspect-pdf <file>` | Shows how a PDF is split into anchored paragraphs. |
 
@@ -270,6 +271,35 @@ in-process lock, so it assumes one writer at a time. That is fine for a review
 tool with a handful of users and would need a real append-only store beyond that.
 
 ---
+
+## Why the Salesforce schema looks the way it does
+
+The object and field names are not invented. They were derived from the public
+API behind **nnnpro.com** (`api.surmount.com/sf-opportunities`), which serves a
+Salesforce replica: every record carries a `salesforce_id`, and an `sf_property`
+is nested inside each opportunity.
+
+That matters more than a naming detail. **The customer-facing marketplace reads
+from Salesforce.** So writing to Salesforce is not a stand-in for the real
+integration — it *is* the integration, and the approval gate sits at the last
+point before a figure becomes publicly visible to investors. A wrong cap rate in
+an internal CRM is an embarrassment; on a public listing it is a different kind
+of problem.
+
+Two consequences worth knowing:
+
+- **Cap rate and price per SF are extracted but not written.** The listing derives
+  both from list price and NOI, and writing an independently extracted rate would
+  create a second source of truth that can disagree with the arithmetic. They are
+  still cited and reviewed — a mismatch is worth catching — just not written.
+- **`Concept__c` is picklist-backed** and drives the marketplace's Concept filter,
+  so a free-text tenant name would produce a listing no filter can find.
+  Validating it against the live picklist is the highest-value next change.
+
+`docs/salesforce-schema.md` is **generated** from `lib/salesforce/mapping.ts`
+(`npm run generate-sf-docs`) so it cannot drift from what the adapter sends. Every
+field records whether its name was observed, is a standard Salesforce field, or is
+proposed by Artificer and would need creating in the org.
 
 ## Mock vs real Salesforce
 

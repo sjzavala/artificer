@@ -210,7 +210,7 @@ export function ReviewScreen({ deal, salesforceMode }: { deal: Deal; salesforceM
           <PipelineStepper
             current={approved ? 'crm' : 'approve'}
             done={approved ? (['upload', 'review', 'approve', 'crm'] as Stage[]) : (['upload', 'review'] as Stage[])}
-            recordHref={written?.mode === 'mock' ? `/records/${written.dealId}` : null}
+            recordHref={written?.mode === 'mock' ? `/records/${written.primaryId}` : null}
           />
         </div>
 
@@ -228,14 +228,14 @@ export function ReviewScreen({ deal, salesforceMode }: { deal: Deal; salesforceM
             </span>
             {written.mode === 'mock' ? (
               <Link
-                href={`/records/${written.dealId}`}
+                href={`/records/${written.primaryId}`}
                 className="focus-ring ml-2 inline-flex items-center gap-1 rounded font-medium text-accent underline underline-offset-2"
               >
                 Open record view <ExternalLink size={12} />
               </Link>
             ) : written.instanceUrl ? (
               <a
-                href={`${written.instanceUrl}/${written.dealId}`}
+                href={`${written.instanceUrl}/${written.primaryId}`}
                 target="_blank"
                 rel="noreferrer"
                 className="focus-ring ml-2 inline-flex items-center gap-1 rounded font-medium text-accent underline underline-offset-2"
@@ -348,7 +348,7 @@ export function ReviewScreen({ deal, salesforceMode }: { deal: Deal; salesforceM
         rejecting={rejecting}
         rejectError={rejectError}
         onReject={() => void reject()}
-        recordHref={written?.mode === 'mock' ? `/records/${written.dealId}` : null}
+        recordHref={written?.mode === 'mock' ? `/records/${written.primaryId}` : null}
       />
 
       <ApprovalModal

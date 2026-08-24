@@ -36,27 +36,21 @@ export class RealSalesforceAdapter implements SalesforceAdapter {
     const conn = await this.connect();
     const { payloads, dealHash } = request;
 
-    const existing = await conn.query<{ Id: string; Property__c: string; Tenant__c: string; Lease__c: string }>(
-      `SELECT Id, Property__c, Tenant__c, Lease__c FROM Deal__c WHERE Deal_Hash__c = '${escapeSoql(dealHash)}' LIMIT 1`,
-    );
-    const prior = existing.records[0];
-
     // jsforce's generated types describe an untyped org as a bare Schema, so
     // the DML surface is narrowed here rather than fought with generics.
     const api = (name: string) => conn.sobject(name) as unknown as SObjectApi;
 
-    const propertyId = await upsert(api('Property__c'), 'Property__c', payloads.Property__c, prior?.Property__c);
-    const tenantId = await upsert(api('Tenant__c'), 'Tenant__c', payloads.Tenant__c, prior?.Tenant__c);
-    const leaseId = await upsert(
-      api('Lease__c'),
-      'Lease__c',
-      { ...payloads.Lease__c, Property__c: propertyId, Tenant__c: tenantId },
-      prior?.Lease__c,
+    const existing = await conn.query<{ Id: string; Property__c: string }>(
+      `SELECT Id, Property__c FROM Opportunity WHERE Deal_Hash__c = '${escapeSoql(dealHash)}' LIMIT 1`,
     );
-    const dealId = await upsert(
-      api('Deal__c'),
-      'Deal__c',
-      { ...payloads.Deal__c, Property__c: propertyId, Tenant__c: tenantId, Lease__c: leaseId },
+    const prior = existing.records[0];
+
+    // Property first: the Opportunity's lookup needs its id.
+    const propertyId = await upsert(api('Property__c'), 'Property__c', payloads.Property__c, prior?.Property__c);
+    const opportunityId = await upsert(
+      api('Opportunity'),
+      'Opportunity',
+      { ...payloads.Opportunity, Property__c: propertyId },
       prior?.Id,
     );
 
@@ -64,10 +58,8 @@ export class RealSalesforceAdapter implements SalesforceAdapter {
       mode: 'real',
       writtenAt: new Date().toISOString(),
       updated: Boolean(prior),
-      propertyId,
-      tenantId,
-      leaseId,
-      dealId,
+      ids: { Property__c: propertyId, Opportunity: opportunityId },
+      primaryId: opportunityId,
       instanceUrl: conn.instanceUrl,
     };
   }

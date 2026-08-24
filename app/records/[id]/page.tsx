@@ -41,13 +41,13 @@ export default async function RecordPage({ params }: { params: Promise<{ id: str
           <div className="border-b border-slate-200 bg-gradient-to-b from-[#eef3f9] to-[#f6f8fb] px-6 py-4">
             <div className="flex items-center gap-2 text-2xs uppercase tracking-wider text-slate-500">
               <Database size={13} />
-              Deal
+              Opportunity
               <span className="rounded bg-slate-200 px-1.5 py-px font-mono text-[0.625rem] normal-case tracking-normal text-slate-700">
                 mock org
               </span>
             </div>
             <h1 className="mt-1 text-xl font-semibold tracking-tight text-slate-900">
-              {String(set.records.Deal__c.Name ?? 'Deal')}
+              {String(set.records.Opportunity.Name ?? 'Opportunity')}
             </h1>
             <p className="mt-1 font-mono text-xs text-slate-500">{set.id}</p>
             <p className="mt-2 text-xs text-slate-600">

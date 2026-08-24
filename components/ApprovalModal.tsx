@@ -82,13 +82,16 @@ export function ApprovalModal({
           <p className="text-sm text-ink">
             {isUpdate
               ? 'A record set already exists for these values. It will be updated in place — no duplicate is created.'
-              : 'Four related records will be created:'}
+              : `${SOBJECT_ORDER.length} related records will be created:`}
           </p>
 
           <ul className="mt-3 divide-y divide-rule rounded-md border border-rule">
             {SOBJECT_ORDER.map((name) => (
               <li key={name} className="flex items-center justify-between px-3 py-2 text-sm">
-                <span className="font-mono text-xs text-ink">{name}</span>
+                <span className="font-mono text-xs text-ink">
+                  {name}
+                  <span className="ml-2 font-sans text-2xs text-ink-faint">{SOBJECT_LABELS[name]}</span>
+                </span>
                 <span className="text-xs text-ink-muted">
                   <span className="tnum">{fieldCounts[name] ?? 0}</span> field
                   {(fieldCounts[name] ?? 0) === 1 ? '' : 's'}
@@ -99,8 +102,7 @@ export function ApprovalModal({
 
           <p className="mt-3 text-xs text-ink-muted">
             <span className="tnum">{total}</span> populated fields across{' '}
-            <span className="tnum">{SOBJECT_ORDER.length}</span> objects, plus the relationship lookups
-            linking them.
+            <span className="tnum">{SOBJECT_ORDER.length}</span> objects, plus the lookup linking them.
           </p>
 
           {needsAttention > 0 ? (

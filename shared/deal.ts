@@ -43,10 +43,10 @@ export interface SalesforceWriteResult {
   writtenAt: string;
   /** True when an existing record set was updated rather than created. */
   updated: boolean;
-  propertyId: string;
-  tenantId: string;
-  leaseId: string;
-  dealId: string;
+  /** Record id per object written, keyed by Salesforce API name. */
+  ids: Record<string, string>;
+  /** The Opportunity — the record a reviewer is sent to after approval. */
+  primaryId: string;
   /** Present in real mode so the UI can link out to the org. */
   instanceUrl?: string;
 }

@@ -58,12 +58,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       mode: result.mode,
       updated: result.updated,
       dealHash: deal.dealHash,
-      recordIds: {
-        Property__c: result.propertyId,
-        Tenant__c: result.tenantId,
-        Lease__c: result.leaseId,
-        Deal__c: result.dealId,
-      },
+      recordIds: result.ids,
       fieldCounts: payloadFieldCounts(payloads),
     },
   });

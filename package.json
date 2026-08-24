@@ -17,7 +17,8 @@
     "check-store": "tsx scripts/check-store.ts",
     "check-model": "tsx scripts/check-model.ts",
     "inspect-pdf": "tsx scripts/inspect-pdf.ts",
-    "reset-demo": "tsx scripts/reset-demo.ts"
+    "reset-demo": "tsx scripts/reset-demo.ts",
+    "generate-sf-docs": "tsx scripts/generate-sf-docs.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.120.0",

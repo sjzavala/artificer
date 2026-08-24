@@ -1,20 +1,23 @@
 import type { SalesforceMode, SalesforceWriteResult } from '@/shared/deal';
 
-export type SObjectName = 'Property__c' | 'Tenant__c' | 'Lease__c' | 'Deal__c';
+/**
+ * The objects Artificer writes.
+ *
+ * These are not invented: they mirror the schema observed behind nnnpro.com,
+ * whose public API serves `sf-opportunities` records with a nested `sf_property`
+ * and a `salesforce_id` on each — i.e. a Salesforce replica. An Opportunity is
+ * the listing; Property__c is the asset it sits on.
+ */
+export type SObjectName = 'Property__c' | 'Opportunity';
 
 export type RecordPayload = Record<string, string | number | boolean | null>;
 
-/** The four related payloads produced from one approved extraction. */
-export interface DealPayloads {
-  Property__c: RecordPayload;
-  Tenant__c: RecordPayload;
-  Lease__c: RecordPayload;
-  Deal__c: RecordPayload;
-}
+/** The related payloads produced from one approved extraction. */
+export type DealPayloads = Record<SObjectName, RecordPayload>;
 
 /** A persisted record set — what the mock CRM record view renders. */
 export interface SalesforceRecordSet {
-  /** The Deal__c record id; also the /records/[id] route parameter. */
+  /** The Opportunity id; also the /records/[id] route parameter. */
   id: string;
   dealId: string;
   dealHash: string;
@@ -22,13 +25,8 @@ export interface SalesforceRecordSet {
   createdAt: string;
   updatedAt: string;
   approvedBy: string;
-  ids: { Property__c: string; Tenant__c: string; Lease__c: string; Deal__c: string };
-  records: {
-    Property__c: RecordPayload;
-    Tenant__c: RecordPayload;
-    Lease__c: RecordPayload;
-    Deal__c: RecordPayload;
-  };
+  ids: Record<SObjectName, string>;
+  records: Record<SObjectName, RecordPayload>;
 }
 
 export interface WriteRequest {

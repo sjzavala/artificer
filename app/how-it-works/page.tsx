@@ -81,7 +81,7 @@ export default async function HowItWorksPage() {
               icon={<Database size={15} />}
               tone="lease"
               title="CRM record"
-              body="Four linked records are written — Property, Tenant, Lease and Deal. Afterwards you can generate a draft offering-memo summary from the approved data."
+              body="A Property and an Opportunity are written to Salesforce — the same objects that back the public marketplace, so an approved deal reaches it through the sync that already exists. Afterwards you can generate a draft offering-memo summary from the approved data."
               note="Approving the same values again updates those records instead of creating duplicates."
             />
           </div>
@@ -148,7 +148,7 @@ export default async function HowItWorksPage() {
             <Step
               n={5}
               title="Look at the record"
-              body={<>The four written records, shown as a CRM record view with their relationships.</>}
+              body={<>The written records, shown as a CRM record view with their relationship.</>}
             />
             <Step
               n={6}
