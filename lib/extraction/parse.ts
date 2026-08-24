@@ -116,6 +116,18 @@ export function normaliseExtraction(extraction: NetLeaseExtraction): NetLeaseExt
       field.sourceQuote = field.sourceQuote.replace(/\s+/g, ' ').trim() || null;
     }
     field.edited = Boolean(field.edited);
+
+    // An "alternative" equal to the chosen value is noise, and would show the
+    // reviewer a button that changes nothing.
+    field.alternatives = (field.alternatives ?? [])
+      .filter((alternative) => alternative.value !== null && alternative.value !== field.value)
+      .map((alternative) => ({
+        ...alternative,
+        sourceQuote:
+          typeof alternative.sourceQuote === 'string'
+            ? alternative.sourceQuote.replace(/\s+/g, ' ').trim() || null
+            : null,
+      }));
   }
   return extraction;
 }

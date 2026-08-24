@@ -114,6 +114,7 @@ export const AUDIT_ACTIONS = [
   'extraction_completed',
   'extraction_failed',
   'field_edited',
+  'field_confirmed',
   'deal_approved',
   'deal_rejected',
   'om_draft_generated',

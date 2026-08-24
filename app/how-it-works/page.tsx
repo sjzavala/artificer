@@ -120,12 +120,17 @@ export default async function HowItWorksPage() {
             />
             <Step
               n={3}
-              title="Deal with anything flagged"
+              title="Resolve anything flagged"
               body={
                 <>
-                  The amber strip at the top lists every field Artificer could not state
-                  confidently, and flagged rows carry a marker in the margin. Click a value to edit
-                  it — your correction is recorded as yours, and the original stays visible on hover.
+                  The amber strip lists every field Artificer could not state confidently; clicking
+                  one jumps to it. Each flagged field offers a way to settle it rather than just
+                  reporting the problem: where the document contradicts itself, the competing value
+                  is offered as <Strong>Use 9,026 SF</Strong> with its own quote, and choosing it
+                  moves the citation too. Otherwise, type a value, mark it{' '}
+                  <Strong>Looks right</Strong>, or — where the document really is silent —{' '}
+                  <Strong>Confirm not stated</Strong>. Corrections are recorded as yours, and the
+                  original stays visible on hover.
                 </>
               }
             />
@@ -237,6 +242,11 @@ export default async function HowItWorksPage() {
               tone="bad"
               title="It will not guess"
               body="A field the document does not state comes back as “not found”. That is treated as the correct answer, not a failure — an invented value is far more dangerous than a missing one."
+            />
+            <Principle
+              tone="good"
+              title="It will not leave you stuck with a flag"
+              body="Where a document contradicts itself, both figures are kept with their own citations, and the competing one can be adopted in a click. Every flagged field can be corrected, accepted, or confirmed as genuinely absent."
             />
             <Principle
               tone="bad"

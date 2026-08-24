@@ -95,10 +95,10 @@ describe('resolveAnchors', () => {
   it('rewrites anchors and reports what it corrected', () => {
     let extraction = emptyExtraction();
     extraction = withField(extraction, 'economics.capRate', {
-      value: 6.75, confidence: 'high', sourceQuote: 'Cap Rate: 6.75%', sourceLocation: 'p-4', edited: false,
+      value: 6.75, confidence: 'high', sourceQuote: 'Cap Rate: 6.75%', sourceLocation: 'p-4', edited: false, confirmed: false, alternatives: [],
     });
     extraction = withField(extraction, 'lease.expirationDate', {
-      value: '2034-09-30', confidence: 'high', sourceQuote: 'Lease Expiration: September 30, 2034', sourceLocation: 'p-3', edited: false,
+      value: '2034-09-30', confidence: 'high', sourceQuote: 'Lease Expiration: September 30, 2034', sourceLocation: 'p-3', edited: false, confirmed: false, alternatives: [],
     });
 
     const stats = resolveAnchors(extraction, PARAGRAPHS);
@@ -109,7 +109,7 @@ describe('resolveAnchors', () => {
 
   it('downgrades a high-confidence field whose citation is not in the document', () => {
     const extraction = withField(emptyExtraction(), 'tenant.creditRating', {
-      value: 'BBB (S&P)', confidence: 'high', sourceQuote: 'rated BBB by Standard & Poor', sourceLocation: 'p-2', edited: false,
+      value: 'BBB (S&P)', confidence: 'high', sourceQuote: 'rated BBB by Standard & Poor', sourceLocation: 'p-2', edited: false, confirmed: false, alternatives: [],
     });
 
     const stats = resolveAnchors(extraction, PARAGRAPHS);
@@ -232,5 +232,78 @@ describe('pageTextFromItems', () => {
 
   it('handles a single-line page without inventing a break', () => {
     expect(pageTextFromItems([line('Only line', 700)])).toBe('Only line');
+  });
+});
+
+describe('alternatives — the competing value a document also states', () => {
+  const withAlternative = () => {
+    const extraction = withField(emptyExtraction(), 'property.buildingSf', {
+      value: 9100,
+      confidence: 'low',
+      sourceQuote: 'Price: $1,842,000',
+      sourceLocation: 'p-2',
+      edited: false,
+      confirmed: false,
+      alternatives: [
+        {
+          value: 9026,
+          sourceQuote: 'The tenant is responsible for all taxes',
+          sourceLocation: null,
+          note: 'stated later',
+        },
+      ],
+    });
+    return extraction;
+  };
+
+  it('resolves an alternative to its own anchor, separate from the chosen value', () => {
+    const extraction = withAlternative();
+    resolveAnchors(extraction, PARAGRAPHS);
+
+    const field = getField(extraction, 'property.buildingSf')!;
+    expect(field.sourceLocation).toBe('p-2');
+    // The whole point: the competing figure carries its own citation, so
+    // adopting it does not inherit a passage that supports the other number.
+    expect(field.alternatives[0].sourceLocation).toBe('p-4');
+  });
+
+  it('counts an alternative citation in the resolution stats', () => {
+    const stats = resolveAnchors(withAlternative(), PARAGRAPHS);
+    expect(stats.cited).toBe(2);
+    expect(stats.resolved).toBe(2);
+  });
+
+  it('discards an alternative whose quote is not in the document', () => {
+    const extraction = withField(emptyExtraction(), 'property.buildingSf', {
+      value: 9100,
+      confidence: 'low',
+      sourceQuote: 'Price: $1,842,000',
+      sourceLocation: 'p-2',
+      edited: false,
+      confirmed: false,
+      alternatives: [
+        { value: 9026, sourceQuote: 'a passage that does not appear anywhere', sourceLocation: 'p-3', note: null },
+      ],
+    });
+
+    resolveAnchors(extraction, PARAGRAPHS);
+    // Offering a reviewer a value to adopt on the strength of an invented quote
+    // would be worse than offering nothing at all.
+    expect(getField(extraction, 'property.buildingSf')!.alternatives).toHaveLength(0);
+  });
+
+  it('discards an alternative with no value to adopt', () => {
+    const extraction = withField(emptyExtraction(), 'property.buildingSf', {
+      value: 9100,
+      confidence: 'low',
+      sourceQuote: 'Price: $1,842,000',
+      sourceLocation: 'p-2',
+      edited: false,
+      confirmed: false,
+      alternatives: [{ value: null, sourceQuote: 'Cap Rate: 6.75%', sourceLocation: 'p-2', note: null }],
+    });
+
+    resolveAnchors(extraction, PARAGRAPHS);
+    expect(getField(extraction, 'property.buildingSf')!.alternatives).toHaveLength(0);
   });
 });

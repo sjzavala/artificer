@@ -83,7 +83,7 @@ describe('path helpers', () => {
       confidence: 'high',
       sourceQuote: 'Cap Rate: 6.75%',
       sourceLocation: 'p-4',
-      edited: false,
+      edited: false, confirmed: false, alternatives: [],
     });
     expect(getField(updated, 'economics.capRate')?.value).toBe(6.75);
   });
@@ -91,7 +91,7 @@ describe('path helpers', () => {
   it('does not mutate the extraction it was given', () => {
     const original = emptyExtraction();
     withField(original, 'economics.capRate', {
-      value: 6.75, confidence: 'high', sourceQuote: null, sourceLocation: null, edited: false,
+      value: 6.75, confidence: 'high', sourceQuote: null, sourceLocation: null, edited: false, confirmed: false, alternatives: [],
     });
     expect(getField(original, 'economics.capRate')?.value).toBeNull();
   });
@@ -104,7 +104,7 @@ describe('path helpers', () => {
   it('rejects a write to an unknown section', () => {
     expect(() =>
       withField(emptyExtraction(), 'nope.field', {
-        value: 1, confidence: 'high', sourceQuote: null, sourceLocation: null, edited: false,
+        value: 1, confidence: 'high', sourceQuote: null, sourceLocation: null, edited: false, confirmed: false, alternatives: [],
       }),
     ).toThrow();
   });
@@ -121,22 +121,49 @@ describe('summarise', () => {
   it('flags low confidence and missing fields, but not medium ones', () => {
     let extraction = emptyExtraction();
     extraction = withField(extraction, 'property.city', {
-      value: 'Mount Vernon', confidence: 'high', sourceQuote: 'q', sourceLocation: 'p-1', edited: false,
+      value: 'Mount Vernon', confidence: 'high', sourceQuote: 'q', sourceLocation: 'p-1', edited: false, confirmed: false, alternatives: [],
     });
     extraction = withField(extraction, 'property.state', {
-      value: 'OH', confidence: 'medium', sourceQuote: 'q', sourceLocation: 'p-1', edited: false,
+      value: 'OH', confidence: 'medium', sourceQuote: 'q', sourceLocation: 'p-1', edited: false, confirmed: false, alternatives: [],
     });
     extraction = withField(extraction, 'property.zip', {
-      value: '43050', confidence: 'low', sourceQuote: 'q', sourceLocation: 'p-1', edited: true,
+      value: '43050', confidence: 'low', sourceQuote: 'q', sourceLocation: 'p-1', edited: false, confirmed: false, alternatives: [],
     });
 
     const summary = summarise(extraction);
     expect(summary.high).toBe(1);
     expect(summary.medium).toBe(1);
     expect(summary.low).toBe(1);
-    expect(summary.edited).toBe(1);
     expect(summary.needsAttention).toContain('property.zip');
     expect(summary.needsAttention).not.toContain('property.state');
     expect(summary.needsAttention).not.toContain('property.city');
+  });
+
+  it('drops a field from the attention list once a human has edited it', () => {
+    const flagged = withField(emptyExtraction(), 'property.buildingSf', {
+      value: 9100, confidence: 'low', sourceQuote: 'q', sourceLocation: 'p-1', edited: false, confirmed: false, alternatives: [],
+    });
+    expect(summarise(flagged).needsAttention).toContain('property.buildingSf');
+
+    const resolved = withField(flagged, 'property.buildingSf', {
+      value: 9026, confidence: 'high', sourceQuote: 'q', sourceLocation: 'p-20', edited: true, confirmed: false, alternatives: [],
+    });
+    const summary = summarise(resolved);
+    expect(summary.edited).toBe(1);
+    expect(summary.needsAttention).not.toContain('property.buildingSf');
+  });
+
+  it('drops a field from the attention list once a human has confirmed it as-is', () => {
+    // Confirming leaves the value and its low grade alone — the document really
+    // is ambiguous — but the reviewer has now made that call, so it stops asking.
+    const confirmed = withField(emptyExtraction(), 'property.buildingSf', {
+      value: 9100, confidence: 'low', sourceQuote: 'q', sourceLocation: 'p-1', edited: false, confirmed: true, alternatives: [],
+    });
+
+    const summary = summarise(confirmed);
+    expect(summary.confirmed).toBe(1);
+    expect(summary.edited).toBe(0);
+    expect(summary.low).toBe(1);
+    expect(summary.needsAttention).not.toContain('property.buildingSf');
   });
 });

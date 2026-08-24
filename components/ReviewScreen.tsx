@@ -65,10 +65,20 @@ export function ReviewScreen({ deal, salesforceMode }: { deal: Deal; salesforceM
   const activeField = activePath ? getField(extraction, activePath) : undefined;
 
   const selectField = useCallback(
-    (path: string) => {
+    (path: string, options?: { scrollIntoView?: boolean }) => {
       setActivePath(path);
       // Only counts when there is a citation to land on — that is the point.
       if (getField(extraction, path)?.sourceLocation) completeStep('check-citation');
+
+      // Coming from the "needs attention" strip, the field may be far down the
+      // list; tinting a row the reviewer cannot see is not a jump to it.
+      if (options?.scrollIntoView) {
+        window.requestAnimationFrame(() => {
+          document
+            .querySelector(`[data-field-path="${CSS.escape(path)}"]`)
+            ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        });
+      }
     },
     [extraction],
   );
@@ -79,7 +89,11 @@ export function ReviewScreen({ deal, salesforceMode }: { deal: Deal; salesforceM
   );
 
   const commitField = useCallback(
-    async (path: string, value: unknown) => {
+    async (
+      path: string,
+      value: unknown,
+      options?: { sourceQuote?: string | null; sourceLocation?: string | null; confirm?: boolean },
+    ) => {
       setSavingPath(path);
       setEditError(null);
       const previous = getField(extraction, path);
@@ -88,7 +102,7 @@ export function ReviewScreen({ deal, salesforceMode }: { deal: Deal; salesforceM
         const res = await fetch(`/api/deals/${deal.id}/field`, {
           method: 'PATCH',
           headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ path, value, actor: requireReviewerName() }),
+          body: JSON.stringify({ path, value, actor: requireReviewerName(), ...options }),
         });
         const payload = (await res.json().catch(() => ({}))) as {
           field?: ExtractedField<unknown>;
@@ -233,7 +247,11 @@ export function ReviewScreen({ deal, salesforceMode }: { deal: Deal; salesforceM
         ) : null}
 
         {summary.needsAttention.length > 0 && !approved ? (
-          <NeedsAttention paths={summary.needsAttention} activePath={activePath} onSelect={selectField} />
+          <NeedsAttention
+            paths={summary.needsAttention}
+            activePath={activePath}
+            onSelect={(path) => selectField(path, { scrollIntoView: true })}
+          />
         ) : null}
 
         {editError ? (
@@ -305,7 +323,7 @@ export function ReviewScreen({ deal, salesforceMode }: { deal: Deal; salesforceM
                     saving={savingPath === spec.path}
                     readOnly={readOnly}
                     onSelect={() => selectField(spec.path)}
-                    onCommit={(value) => void commitField(spec.path, value)}
+                    onCommit={(value, options) => void commitField(spec.path, value, options)}
                   />
                 ))}
               </div>

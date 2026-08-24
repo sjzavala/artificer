@@ -31,7 +31,7 @@ const DOMAIN_PRIMER = `Domain background you should assume:
 const OUTPUT_CONTRACT = `Output contract:
 - Return exactly one JSON object. No prose before or after it. No markdown code fences. No comments.
 - Every field in the schema must be present, even when the document says nothing about it.
-- Every field is an envelope object with these five keys: "value", "confidence", "sourceQuote", "sourceLocation", "edited".
+- Every field is an envelope object with these six keys: "value", "confidence", "sourceQuote", "sourceLocation", "edited", "alternatives".
 - "edited" is always false in your output. A human sets it later; it is never yours to set.`;
 
 const CONFIDENCE_RUBRIC = `Confidence rubric — this drives which fields a human reviewer looks at first, so grade honestly:
@@ -72,7 +72,11 @@ const JSON_SHAPE = `## Exact output shape
 
 where every {…} is:
 
-{ "value": <value or null>, "confidence": "high" | "medium" | "low" | "not_found", "sourceQuote": <string or null>, "sourceLocation": <string or null>, "edited": false }`;
+{ "value": <value or null>, "confidence": "high" | "medium" | "low" | "not_found", "sourceQuote": <string or null>, "sourceLocation": <string or null>, "edited": false, "alternatives": [] }
+
+"alternatives" is almost always an empty array. Fill it ONLY when the document states a different value for the same field somewhere else. Each entry looks like:
+
+{ "value": <the competing value>, "sourceQuote": <verbatim passage stating it>, "sourceLocation": <its anchor id>, "note": <a short phrase saying where it appears, e.g. "stated in the property description"> }`;
 
 const HARD_RULES = `## Hard rules
 
@@ -80,7 +84,7 @@ const HARD_RULES = `## Hard rules
 2. Every non-null value MUST carry a "sourceQuote" copied verbatim from the document — the same characters, in the same order, with nothing paraphrased, corrected or abbreviated. Keep it to 40 words or fewer and choose the passage that most directly supports the value.
 3. Set "sourceLocation" to the anchor id shown in brackets at the start of the passage you quoted (for example "p-42"). The document is supplied with every paragraph pre-tagged as [p-N | page M]; never invent an anchor that is not in the document.
 4. For a derived value (cap rate you computed, acres you converted, remaining term you calculated), quote the passage containing the inputs you used, and set confidence to "medium" at most.
-5. If the document contradicts itself, take the more authoritative figure, set confidence to "low", and quote the passage you chose.
+5. If the document contradicts itself, take the more authoritative figure, set confidence to "low", quote the passage you chose — AND put the competing figure in "alternatives" with its own verbatim quote and anchor. A reviewer resolving the conflict needs the other number and where it came from; making them hunt for it is the whole reason this field exists. Never invent an alternative: only report one the document actually states.
 6. Do not add keys that are not in the schema. Do not omit keys that are.`;
 
 /**

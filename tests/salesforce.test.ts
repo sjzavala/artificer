@@ -32,7 +32,7 @@ function extractionWith(values: Record<string, string | number>): NetLeaseExtrac
   let extraction = emptyExtraction();
   for (const [path, value] of Object.entries(values)) {
     extraction = withField(extraction, path, {
-      value, confidence: 'high', sourceQuote: 'quoted', sourceLocation: 'p-1', edited: false,
+      value, confidence: 'high', sourceQuote: 'quoted', sourceLocation: 'p-1', edited: false, confirmed: false, alternatives: [],
     });
   }
   return extraction;
@@ -111,14 +111,14 @@ describe('computeDealHash', () => {
 
   it('ignores confidence, citations and the edited flag', () => {
     const restated = withField(BASE, 'property.city', {
-      value: 'Mount Vernon', confidence: 'low', sourceQuote: 'different quote', sourceLocation: 'p-9', edited: true,
+      value: 'Mount Vernon', confidence: 'low', sourceQuote: 'different quote', sourceLocation: 'p-9', edited: true, confirmed: false, alternatives: [],
     });
     expect(computeDealHash(restated)).toBe(computeDealHash(BASE));
   });
 
   it('changes when a business value changes', () => {
     const corrected = withField(BASE, 'economics.askingPrice', {
-      value: 1900000, confidence: 'high', sourceQuote: 'q', sourceLocation: 'p-1', edited: true,
+      value: 1900000, confidence: 'high', sourceQuote: 'q', sourceLocation: 'p-1', edited: true, confirmed: false, alternatives: [],
     });
     expect(computeDealHash(corrected)).not.toBe(computeDealHash(BASE));
   });
@@ -159,7 +159,7 @@ function adapterContract(name: string, create: () => SalesforceAdapter) {
       const first = await adapter.write(requestFor(dealFrom(BASE)));
 
       const corrected = withField(BASE, 'economics.askingPrice', {
-        value: 1900000, confidence: 'high', sourceQuote: 'q', sourceLocation: 'p-1', edited: true,
+        value: 1900000, confidence: 'high', sourceQuote: 'q', sourceLocation: 'p-1', edited: true, confirmed: false, alternatives: [],
       });
       const second = await adapter.write(requestFor(dealFrom(corrected, 'd_test_2')));
 

@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import {
+  BadgeCheck,
   CheckCircle2,
   FileUp,
   PencilLine,
@@ -16,6 +17,7 @@ const ICONS: Record<AuditAction, { icon: typeof FileUp; className: string }> = {
   extraction_completed: { icon: Sparkles, className: 'text-ink-muted' },
   extraction_failed: { icon: TriangleAlert, className: 'text-red-600' },
   field_edited: { icon: PencilLine, className: 'text-amber-700' },
+  field_confirmed: { icon: BadgeCheck, className: 'text-emerald-700' },
   deal_approved: { icon: CheckCircle2, className: 'text-accent' },
   deal_rejected: { icon: XCircle, className: 'text-red-600' },
   om_draft_generated: { icon: ScrollText, className: 'text-ink-muted' },

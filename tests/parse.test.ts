@@ -22,7 +22,7 @@ function completeResponse(overrides: Record<string, unknown> = {}) {
       confidence: 'not_found',
       sourceQuote: null,
       sourceLocation: null,
-      edited: false,
+      edited: false, confirmed: false, alternatives: [],
     };
   }
   return JSON.stringify({ ...body, ...overrides });
@@ -85,10 +85,10 @@ describe('parseExtractionResponse', () => {
     const result = parseExtractionResponse(
       completeResponse({
         economics: {
-          askingPrice: { value: '$1,842,000', confidence: 'high', sourceQuote: 'Price: $1,842,000', sourceLocation: 'p-4', edited: false },
-          annualBaseRent: { value: 124335, confidence: 'high', sourceQuote: 'NOI $124,335', sourceLocation: 'p-4', edited: false },
-          capRate: { value: '6.75%', confidence: 'high', sourceQuote: 'Cap Rate: 6.75%', sourceLocation: 'p-4', edited: false },
-          pricePerSf: { value: null, confidence: 'not_found', sourceQuote: null, sourceLocation: null, edited: false },
+          askingPrice: { value: '$1,842,000', confidence: 'high', sourceQuote: 'Price: $1,842,000', sourceLocation: 'p-4', edited: false, confirmed: false, alternatives: [] },
+          annualBaseRent: { value: 124335, confidence: 'high', sourceQuote: 'NOI $124,335', sourceLocation: 'p-4', edited: false, confirmed: false, alternatives: [] },
+          capRate: { value: '6.75%', confidence: 'high', sourceQuote: 'Cap Rate: 6.75%', sourceLocation: 'p-4', edited: false, confirmed: false, alternatives: [] },
+          pricePerSf: { value: null, confidence: 'not_found', sourceQuote: null, sourceLocation: null, edited: false, confirmed: false, alternatives: [] },
         },
       }),
     );
@@ -124,7 +124,7 @@ describe('parseExtractionResponse', () => {
 
   it('rejects an enum value outside the allowed set', () => {
     const bad = JSON.parse(completeResponse());
-    bad.lease.leaseType = { value: 'super net', confidence: 'high', sourceQuote: 'q', sourceLocation: 'p-1', edited: false };
+    bad.lease.leaseType = { value: 'super net', confidence: 'high', sourceQuote: 'q', sourceLocation: 'p-1', edited: false, confirmed: false, alternatives: [] };
 
     const result = parseExtractionResponse(JSON.stringify(bad));
     expect(result.ok).toBe(false);
@@ -134,7 +134,7 @@ describe('parseExtractionResponse', () => {
 
   it('rejects a date that is not normalised', () => {
     const bad = JSON.parse(completeResponse());
-    bad.lease.commencementDate = { value: 'October 1, 2019', confidence: 'high', sourceQuote: 'q', sourceLocation: 'p-1', edited: false };
+    bad.lease.commencementDate = { value: 'October 1, 2019', confidence: 'high', sourceQuote: 'q', sourceLocation: 'p-1', edited: false, confirmed: false, alternatives: [] };
 
     const result = parseExtractionResponse(JSON.stringify(bad));
     expect(result.ok).toBe(false);
@@ -154,7 +154,7 @@ describe('normaliseExtraction', () => {
       confidence: 'high',
       sourceQuote: 'Mount Vernon, Ohio',
       sourceLocation: 'p-3',
-      edited: false,
+      edited: false, confirmed: false, alternatives: [],
     });
 
     const field = getField(normaliseExtraction(extraction), 'property.city')!;
@@ -169,7 +169,7 @@ describe('normaliseExtraction', () => {
       confidence: 'not_found',
       sourceQuote: 'Mount Vernon, Ohio',
       sourceLocation: 'p-3',
-      edited: false,
+      edited: false, confirmed: false, alternatives: [],
     });
 
     const field = getField(normaliseExtraction(extraction), 'property.city')!;
@@ -183,9 +183,43 @@ describe('normaliseExtraction', () => {
       confidence: 'high',
       sourceQuote: '  Mount   Vernon,\n  Ohio ',
       sourceLocation: 'p-3',
-      edited: false,
+      edited: false, confirmed: false, alternatives: [],
     });
 
     expect(getField(normaliseExtraction(extraction), 'property.city')?.sourceQuote).toBe('Mount Vernon, Ohio');
+  });
+});
+
+describe('alternatives normalisation', () => {
+  it('drops an alternative that merely repeats the chosen value', () => {
+    const extraction = withField(emptyExtraction(), 'property.buildingSf', {
+      value: 9100,
+      confidence: 'low',
+      sourceQuote: 'Building Size: 9,100 SF',
+      sourceLocation: 'p-6',
+      edited: false,
+      confirmed: false,
+      alternatives: [{ value: 9100, sourceQuote: 'restated later', sourceLocation: 'p-9', note: null }],
+    });
+
+    // A button offering the value already shown changes nothing and wastes the
+    // reviewer's attention on a field that is asking for a decision.
+    expect(getField(normaliseExtraction(extraction), 'property.buildingSf')!.alternatives).toHaveLength(0);
+  });
+
+  it('keeps a genuinely different alternative and tidies its quote', () => {
+    const extraction = withField(emptyExtraction(), 'property.buildingSf', {
+      value: 9100,
+      confidence: 'low',
+      sourceQuote: 'Building Size: 9,100 SF',
+      sourceLocation: 'p-6',
+      edited: false,
+      confirmed: false,
+      alternatives: [{ value: 9026, sourceQuote: '  approximately   9,026\n  square feet ', sourceLocation: 'p-20', note: null }],
+    });
+
+    const alternatives = getField(normaliseExtraction(extraction), 'property.buildingSf')!.alternatives;
+    expect(alternatives).toHaveLength(1);
+    expect(alternatives[0].sourceQuote).toBe('approximately 9,026 square feet');
   });
 });

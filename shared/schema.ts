@@ -17,6 +17,22 @@ import { z } from 'zod';
 export const CONFIDENCE_LEVELS = ['high', 'medium', 'low', 'not_found'] as const;
 export type Confidence = (typeof CONFIDENCE_LEVELS)[number];
 
+/**
+ * Another value the document states for the same field.
+ *
+ * When a document contradicts itself, knowing *that* it contradicts itself is
+ * only half the answer — the reviewer also needs the competing figure and where
+ * it came from. Discarding it forces them to go hunting through the document for
+ * something the extraction already found.
+ */
+export interface FieldAlternative<T> {
+  value: T | null;
+  sourceQuote: string | null;
+  sourceLocation: string | null;
+  /** Short reason this differs, e.g. "stated in the property description". */
+  note: string | null;
+}
+
 export interface ExtractedField<T> {
   /** The extracted value, or null when the document does not state it. */
   value: T | null;
@@ -28,6 +44,15 @@ export interface ExtractedField<T> {
   sourceLocation: string | null;
   /** True once a human has changed the value on the approval screen. */
   edited: boolean;
+  /**
+   * True once a human has looked at a flagged value and accepted it unchanged.
+   * Deliberately distinct from `edited` and from a high grade: "the model was
+   * confident" and "a person checked it" are different claims, and an audit
+   * trail that conflates them is worth less.
+   */
+  confirmed: boolean;
+  /** Competing values found elsewhere in the document. Usually empty. */
+  alternatives: FieldAlternative<T>[];
 }
 
 const confidenceSchema = z.enum(CONFIDENCE_LEVELS);
@@ -39,8 +64,22 @@ function field<T extends z.ZodTypeAny>(inner: T) {
     confidence: confidenceSchema,
     sourceQuote: z.string().nullable().default(null),
     sourceLocation: z.string().nullable().default(null),
-    // Claude never emits `edited`; only the approval UI sets it.
+    // The model never emits these; only the approval UI sets them.
     edited: z.boolean().default(false),
+    confirmed: z.boolean().default(false),
+    // Capped: more than a couple of competing figures is a document problem a
+    // reviewer should read for themselves, not a picklist.
+    alternatives: z
+      .array(
+        z.object({
+          value: inner.nullable(),
+          sourceQuote: z.string().nullable().default(null),
+          sourceLocation: z.string().nullable().default(null),
+          note: z.string().nullable().default(null),
+        }),
+      )
+      .max(3)
+      .default([]),
   });
 }
 
@@ -356,7 +395,15 @@ export function allFields(
 }
 
 export function emptyField<T>(): ExtractedField<T> {
-  return { value: null, confidence: 'not_found', sourceQuote: null, sourceLocation: null, edited: false };
+  return {
+    value: null,
+    confidence: 'not_found',
+    sourceQuote: null,
+    sourceLocation: null,
+    edited: false,
+    confirmed: false,
+    alternatives: [],
+  };
 }
 
 /** An extraction with every field empty — the shape a failed parse falls back to. */
@@ -380,21 +427,37 @@ export interface CompletenessSummary {
   low: number;
   notFound: number;
   edited: number;
-  /** Paths a reviewer should look at first: low confidence or missing. */
+  confirmed: number;
+  /**
+   * Paths still awaiting a decision. A field a human has already edited or
+   * confirmed leaves this list, which is what makes triage finishable.
+   */
   needsAttention: string[];
 }
 
 export function summarise(extraction: NetLeaseExtraction): CompletenessSummary {
   const summary: CompletenessSummary = {
-    total: FIELD_SPECS.length, high: 0, medium: 0, low: 0, notFound: 0, edited: 0, needsAttention: [],
+    total: FIELD_SPECS.length,
+    high: 0, medium: 0, low: 0, notFound: 0,
+    edited: 0, confirmed: 0, needsAttention: [],
   };
+
   for (const { spec, field: f } of allFields(extraction)) {
     if (f.edited) summary.edited += 1;
+    if (f.confirmed) summary.confirmed += 1;
+    const settled = f.edited || f.confirmed;
+
     switch (f.confidence) {
       case 'high': summary.high += 1; break;
       case 'medium': summary.medium += 1; break;
-      case 'low': summary.low += 1; summary.needsAttention.push(spec.path); break;
-      case 'not_found': summary.notFound += 1; summary.needsAttention.push(spec.path); break;
+      case 'low':
+        summary.low += 1;
+        if (!settled) summary.needsAttention.push(spec.path);
+        break;
+      case 'not_found':
+        summary.notFound += 1;
+        if (!settled) summary.needsAttention.push(spec.path);
+        break;
     }
   }
   return summary;

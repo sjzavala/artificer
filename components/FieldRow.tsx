@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Quote, Pencil, Loader2 } from 'lucide-react';
+import { Quote, Pencil, Loader2, ArrowRightLeft, PlusCircle, Check } from 'lucide-react';
 import { ConfidenceChip } from './ConfidenceChip';
 import { formatValue, parseInputValue, toInputValue } from '@/lib/format';
 import type { ExtractedField, FieldSpec } from '@/shared/schema';
@@ -26,7 +26,10 @@ export function FieldRow({
   /** Section-tinted highlight, so a selected row is placed by colour too. */
   activeClassName: string;
   onSelect: () => void;
-  onCommit: (value: unknown) => void;
+  onCommit: (
+    value: unknown,
+    options?: { sourceQuote?: string | null; sourceLocation?: string | null; confirm?: boolean },
+  ) => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
@@ -54,9 +57,15 @@ export function FieldRow({
   // A row needing a decision is marked in the margin, so triage does not depend
   // on reading every confidence chip.
   const flagged = field.confidence === 'low' || field.confidence === 'not_found';
+  const alternatives = field.alternatives ?? [];
+  // A flag that offers nothing to do about it is a dead end, so a selected row
+  // that needs a decision always shows how to resolve it.
+  const settled = field.edited || field.confirmed;
+  const showResolve = active && !readOnly && !editing && !settled && (flagged || alternatives.length > 0);
 
   return (
     <div
+      data-field-path={spec.path}
       onClick={onSelect}
       /*
        * Phone: label and grade share the top line, the value gets the full width
@@ -68,15 +77,22 @@ export function FieldRow({
         active ? activeClassName : 'border-transparent hover:border-rule hover:bg-white'
       }`}
     >
-      {flagged && !readOnly ? (
+      {flagged && !readOnly && !(field.edited || field.confirmed) ? (
         <span aria-hidden className="absolute inset-y-1.5 left-0 w-[3px] rounded-full bg-amber-400" />
       ) : null}
 
       <div className="order-1 pt-0.5 sm:order-none">
         <div className="text-xs font-medium text-ink">{spec.label}</div>
+        {/* Edited and confirmed are different claims about who decided what, and
+            the row says which one applies. */}
         {field.edited ? (
-          <span className="mt-1 inline-flex items-center rounded border border-accent-ring bg-white px-1.5 py-px text-2xs font-medium text-accent">
+          <span className="mt-1 inline-flex items-center rounded-full bg-accent px-1.5 py-px text-2xs font-medium text-white">
             edited
+          </span>
+        ) : field.confirmed ? (
+          <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-emerald-100 px-1.5 py-px text-2xs font-medium text-emerald-800">
+            <Check size={9} strokeWidth={3} />
+            confirmed
           </span>
         ) : null}
       </div>
@@ -151,6 +167,80 @@ export function FieldRow({
           <blockquote className="mt-2 border-l-2 border-accent-ring pl-2.5 text-2xs italic leading-relaxed text-ink-muted">
             “{field.sourceQuote}”
           </blockquote>
+        ) : null}
+
+        {showResolve ? (
+          <div className="mt-2.5 rounded-md border border-amber-200 bg-amber-50/70 p-2.5">
+            <p className="text-2xs font-medium text-amber-900">
+              {alternatives.length > 0
+                ? 'The document also states:'
+                : missing
+                  ? 'Not stated in the document — add it if you know it.'
+                  : 'Check this against the document, then confirm or change it.'}
+            </p>
+
+            {alternatives.map((alternative, index) => (
+              <button
+                key={index}
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onCommit(alternative.value, {
+                    sourceQuote: alternative.sourceQuote,
+                    sourceLocation: alternative.sourceLocation,
+                  });
+                }}
+                className="focus-ring mt-2 block w-full rounded border border-amber-300 bg-white px-2.5 py-2 text-left transition-colors hover:border-amber-500"
+              >
+                <span className="flex items-center gap-1.5">
+                  <ArrowRightLeft size={11} className="shrink-0 text-amber-700" />
+                  <span className="tnum text-xs font-medium text-ink">
+                    Use {formatValue(alternative.value, spec)}
+                  </span>
+                </span>
+                {alternative.sourceQuote ? (
+                  <span className="mt-1 block text-2xs italic leading-relaxed text-ink-muted">
+                    “{alternative.sourceQuote}”
+                  </span>
+                ) : null}
+                {alternative.note ? (
+                  <span className="mt-0.5 block text-2xs text-ink-faint">{alternative.note}</span>
+                ) : null}
+              </button>
+            ))}
+
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  beginEdit();
+                }}
+                className="focus-ring inline-flex items-center gap-1.5 rounded border border-rule bg-white px-2 py-1 text-2xs font-medium text-ink transition-colors hover:border-ink-faint"
+              >
+                {missing ? <PlusCircle size={11} /> : <Pencil size={11} />}
+                {missing ? 'Add a value' : 'Type a different value'}
+              </button>
+
+              {/* Both states need a way to say "I have dealt with this": that the
+                  value is right, or that the document genuinely does not state
+                  it. Without the second, a not_found field could only ever be
+                  cleared by inventing something to put in it. */}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  // Confirming re-commits the same value, marking it reviewed
+                  // and clearing the flag without changing anything.
+                  onCommit(field.value, { confirm: true });
+                }}
+                className="focus-ring inline-flex items-center gap-1.5 rounded border border-accent-ring bg-white px-2 py-1 text-2xs font-medium text-accent transition-colors hover:bg-accent-soft"
+              >
+                <Check size={11} />
+                {missing ? 'Confirm not stated' : 'Looks right'}
+              </button>
+            </div>
+          </div>
         ) : null}
       </div>
 

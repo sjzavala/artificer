@@ -162,6 +162,25 @@ export function resolveAnchors(
   const stats: AnchorStats = { cited: 0, resolved: 0, corrected: 0, unresolvable: 0 };
 
   for (const { field } of allFields(extraction)) {
+    // An alternative is a citation like any other, and an unverifiable one is
+    // worse here than useless: it would offer a reviewer a value to adopt that
+    // the document never stated.
+    field.alternatives = (field.alternatives ?? []).filter((alternative) => {
+      if (alternative.value === null || alternative.value === undefined) return false;
+      if (!alternative.sourceQuote) return false;
+
+      stats.cited += 1;
+      const resolved = resolveAnchor(alternative.sourceQuote, alternative.sourceLocation, paragraphs);
+      if (!resolved.anchorId) {
+        stats.unresolvable += 1;
+        return false;
+      }
+      stats.resolved += 1;
+      if (!resolved.modelAnchorCorrect) stats.corrected += 1;
+      alternative.sourceLocation = resolved.anchorId;
+      return true;
+    });
+
     if (!field.sourceQuote) continue;
     stats.cited += 1;
 

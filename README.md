@@ -65,6 +65,7 @@ There is no path from a document to Salesforce that does not pass through it.
 | **Extract** | One model call per chunk, strict JSON, validated with zod. One repair retry on failure. | The model is asked for a contract, not for prose. Failing twice surfaces a clean error rather than half-parsed data. |
 | **Verify** | Every quote is located in the document ourselves; the model's own anchor is treated as a hint. | A citation nobody checked is decoration. A quote that cannot be found loses its location *and* its high-confidence grade. |
 | **Review** | Document left, fields right. Clicking a field scrolls to and highlights its source. | Checking a claim should cost one click. That is the whole product. |
+| **Resolve** | A flagged field offers the competing value the document also states, with its own citation, plus edit / accept / confirm-absent. | A flag that only reports a problem is a dead end. Where the extraction already found the other figure, making the reviewer hunt for it is indefensible. |
 | **Approve** | A modal states the objects and field counts about to be written, then writes. | Nobody should be able to say afterwards that they did not know what would happen. |
 | **Draft** | An OM summary generated from the *approved record*, never the original document. | The draft can only contain values a person signed off on. |
 

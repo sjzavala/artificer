@@ -75,11 +75,19 @@ The improvements consist of a freestanding single-tenant retail building contain
 The property was constructed in 2019 and features 42 surface parking spaces, a dedicated receiving area and pylon signage along Coshocton Avenue.`,
 ];
 
+interface SeedAlternative {
+  value: string | number;
+  quote: string;
+  note: string;
+}
+
 interface SeedField {
   path: string;
   value: string | number | null;
   confidence: Confidence;
   quote: string | null;
+  /** Competing values the memo also states, offered to the reviewer to adopt. */
+  alternatives?: SeedAlternative[];
 }
 
 const SEED_FIELDS: SeedField[] = [
@@ -91,7 +99,19 @@ const SEED_FIELDS: SeedField[] = [
   { path: 'property.propertyType', value: 'retail', confidence: 'high', quote: 'a freestanding single-tenant retail building' },
   // The two stated figures disagree — exactly the kind of thing a reviewer, not
   // a model, should settle. Graded low so it lands in "Needs attention".
-  { path: 'property.buildingSf', value: 9100, confidence: 'low', quote: 'containing approximately 9,026 square feet of gross leasable area' },
+  {
+    path: 'property.buildingSf',
+    value: 9100,
+    confidence: 'low',
+    quote: 'Building Size: 9,100 SF',
+    alternatives: [
+      {
+        value: 9026,
+        quote: 'containing approximately 9,026 square feet of gross leasable area',
+        note: 'stated in the property description on page 3',
+      },
+    ],
+  },
   { path: 'property.lotSizeAcres', value: 1.24, confidence: 'medium', quote: 'situated on a 54,014 square foot parcel' },
   { path: 'property.yearBuilt', value: 2019, confidence: 'high', quote: 'The property was constructed in 2019' },
 
@@ -139,6 +159,13 @@ export function buildSampleDeal(): SampleDeal {
       sourceQuote: seed.quote,
       sourceLocation: null,
       edited: false,
+      confirmed: false,
+      alternatives: (seed.alternatives ?? []).map((alternative) => ({
+        value: alternative.value,
+        sourceQuote: alternative.quote,
+        sourceLocation: null,
+        note: alternative.note,
+      })),
     });
   }
 
@@ -146,12 +173,22 @@ export function buildSampleDeal(): SampleDeal {
   // seeded deal cannot drift away from how real data behaves.
   resolveAnchors(extraction, paragraphs);
 
-  const unresolved = SEED_FIELDS.filter((seed) => {
-    if (!seed.quote) return false;
+  // Every seeded quote — including each alternative — must be locatable, or the
+  // first screen a stakeholder sees would offer a citation that goes nowhere.
+  const unresolved: string[] = [];
+  for (const seed of SEED_FIELDS) {
     const [section, key] = seed.path.split('.');
-    const bucket = (extraction as unknown as Record<string, Record<string, { sourceLocation: string | null }>>)[section];
-    return !bucket[key].sourceLocation;
-  }).map((seed) => seed.path);
+    const bucket = (extraction as unknown as Record<string, Record<string, {
+      sourceLocation: string | null;
+      alternatives: Array<{ sourceLocation: string | null }>;
+    }>>)[section];
+    const field = bucket[key];
+
+    if (seed.quote && !field.sourceLocation) unresolved.push(seed.path);
+    if ((seed.alternatives?.length ?? 0) !== field.alternatives.length) {
+      unresolved.push(`${seed.path} (alternative)`);
+    }
+  }
 
   return {
     paragraphs,
