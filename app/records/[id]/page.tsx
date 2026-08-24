@@ -86,8 +86,14 @@ function RecordCard({ name, record }: { name: SObjectName; record: RecordPayload
       <dl className="mt-3 grid grid-cols-1 gap-x-8 gap-y-0 sm:grid-cols-2">
         {entries.map(([key, value]) => (
           <div key={key} className="flex items-baseline justify-between gap-4 border-b border-slate-100 py-2">
-            <dt className="font-mono text-2xs text-slate-500">{key}</dt>
-            <dd className={`text-right text-sm ${value === null || value === '' ? 'text-slate-400' : 'tnum text-slate-800'}`}>
+            <dt className="shrink-0 font-mono text-2xs text-slate-500">{key}</dt>
+            {/* Record ids and the deal hash are long unbroken strings; without
+                break-all they run straight off a phone screen. */}
+            <dd
+              className={`min-w-0 break-all text-right text-sm ${
+                value === null || value === '' ? 'text-slate-400' : 'tnum text-slate-800'
+              }`}
+            >
               {value === null || value === '' ? '—' : String(value)}
             </dd>
           </div>

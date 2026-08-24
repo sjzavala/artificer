@@ -80,9 +80,11 @@ function Details({ details }: { details: Record<string, unknown> }) {
   return (
     <dl className="mt-2 flex flex-wrap gap-x-5 gap-y-1 rounded-md border border-rule bg-white px-3 py-2">
       {rows.map(([key, value]) => (
-        <div key={key} className="flex items-baseline gap-1.5">
-          <dt className="font-mono text-2xs text-ink-faint">{key}</dt>
-          <dd className="tnum max-w-[22rem] truncate text-2xs text-ink-muted" title={stringify(value)}>
+        // min-w-0 lets the value truncate instead of forcing the row wider than
+        // the screen; a fixed max-width alone overflowed a 375px phone.
+        <div key={key} className="flex min-w-0 max-w-full items-baseline gap-1.5">
+          <dt className="shrink-0 font-mono text-2xs text-ink-faint">{key}</dt>
+          <dd className="tnum min-w-0 truncate text-2xs text-ink-muted sm:max-w-[22rem]" title={stringify(value)}>
             {stringify(value)}
           </dd>
         </div>

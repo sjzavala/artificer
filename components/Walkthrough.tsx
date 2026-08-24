@@ -29,19 +29,32 @@ export function Walkthrough({ sampleDealHref }: { sampleDealHref: string | null 
   // The review screen has a decision bar pinned to the bottom right, and the
   // panel must never sit on top of the Approve button.
   const overFooter = Boolean(pathname?.startsWith('/deals/'));
-  const bottom = overFooter ? 'bottom-[5.75rem]' : 'bottom-4';
+  const bottom = overFooter ? 'bottom-[8.5rem] sm:bottom-[5.75rem]' : 'bottom-4';
+
+  const [narrow, setNarrow] = useState(false);
 
   useEffect(() => {
+    const query = window.matchMedia('(max-width: 639px)');
+    const onChange = () => setNarrow(query.matches);
+    onChange();
+    query.addEventListener('change', onChange);
+
     const sync = () => setState(readWalkthrough());
     sync();
     window.addEventListener(WALKTHROUGH_EVENT, sync);
-    return () => window.removeEventListener(WALKTHROUGH_EVENT, sync);
+    return () => {
+      window.removeEventListener(WALKTHROUGH_EVENT, sync);
+      query.removeEventListener('change', onChange);
+    };
   }, []);
 
   // Nothing renders server-side: progress lives in localStorage, and a flash of
   // the wrong state is worse than a frame of nothing.
   if (!state) return null;
 
+  // On a phone an expanded panel covers the very document it is pointing at, so
+  // it starts collapsed there — unless the visitor has said otherwise.
+  const collapsed = state.touchedCollapse ? state.collapsed : narrow;
   const done = new Set(state.done);
   const current = nextStep(state);
   const finished = !current;
@@ -76,11 +89,11 @@ export function Walkthrough({ sampleDealHref }: { sampleDealHref: string | null 
         <div className="ml-auto flex items-center gap-0.5">
           <button
             type="button"
-            onClick={() => setCollapsed(!state.collapsed)}
-            aria-label={state.collapsed ? 'Expand walkthrough' : 'Collapse walkthrough'}
+            onClick={() => setCollapsed(!collapsed)}
+            aria-label={collapsed ? 'Expand walkthrough' : 'Collapse walkthrough'}
             className="focus-ring rounded p-1 text-ink-faint transition-colors hover:text-ink"
           >
-            {state.collapsed ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+            {collapsed ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
           </button>
           <button
             type="button"
@@ -101,7 +114,7 @@ export function Walkthrough({ sampleDealHref }: { sampleDealHref: string | null 
         />
       </div>
 
-      {state.collapsed ? null : (
+      {collapsed ? null : (
         <div className="max-h-[min(26rem,60vh)] overflow-y-auto px-3.5 py-3">
           {finished ? (
             <div>

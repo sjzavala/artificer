@@ -451,12 +451,12 @@ function FooterBar({
         </div>
       ) : null}
 
-      <div className="mx-auto flex w-full max-w-[100rem] flex-wrap items-center gap-4 px-5 py-3.5 sm:px-8">
+      <div className="mx-auto flex w-full max-w-[100rem] flex-col gap-3 px-5 py-3 sm:flex-row sm:items-center sm:gap-4 sm:px-8 sm:py-3.5">
         <div className="flex-1">
           <ConfidenceMeter summary={summary} />
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 max-sm:w-full">
           {approved ? (
             <>
               <span className="text-xs text-ink-muted">Approved and written.</span>
@@ -474,16 +474,18 @@ function FooterBar({
               <button
                 type="button"
                 onClick={onToggleReject}
-                className="focus-ring rounded-md border border-rule bg-white px-3.5 py-2.5 text-sm text-ink transition-colors hover:border-ink-faint"
+                className="focus-ring shrink-0 rounded-md border border-rule bg-white px-3.5 py-2.5 text-sm text-ink transition-colors hover:border-ink-faint"
               >
                 {rejected ? 'Reject again' : 'Reject'}
               </button>
               <button
                 type="button"
                 onClick={onApprove}
-                className="focus-ring inline-flex items-center gap-2 rounded-md bg-accent px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-accent-hover"
+                className="focus-ring inline-flex min-w-0 flex-1 items-center justify-center gap-2 rounded-md bg-accent px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-accent-hover sm:flex-none"
               >
-                Approve &amp; Write to Salesforce
+                {/* The full label does not fit beside Reject on a phone. */}
+                <span className="sm:hidden">Approve &amp; Write</span>
+                <span className="hidden sm:inline">Approve &amp; Write to Salesforce</span>
               </button>
             </>
           )}

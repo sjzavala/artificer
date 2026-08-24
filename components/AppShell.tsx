@@ -25,37 +25,44 @@ export function AppShell({
       {/* Dark chrome: a deep band at the top gives the page an anchor and stops
           a white-card layout from reading as an unfinished wireframe. */}
       <header className="sticky top-0 z-30 border-b border-chrome-line bg-chrome bg-chrome-sheen">
-        <div className="mx-auto flex h-16 w-full max-w-[100rem] items-center gap-8 px-5 sm:px-8">
-          <Link href="/" className="focus-ring rounded-sm">
-            <Brand onDark />
-          </Link>
+        <div className="mx-auto w-full max-w-[100rem] px-5 sm:px-8">
+          {/* Brand and identity stay on one line; the nav moves to its own row
+              on a phone, where three tabs plus a name will not fit beside it. */}
+          <div className="flex h-14 items-center gap-4 sm:h-16 sm:gap-8">
+            <Link href="/" className="focus-ring shrink-0 rounded-sm">
+              <Brand onDark />
+            </Link>
 
-          <nav className="flex items-center gap-1 text-sm">
-            <NavLink href="/how-it-works" label="How it works" active={active === 'guide'} />
-            <NavLink href="/" label="Deals" active={active === 'deals'} />
-            <NavLink href="/audit" label="Audit" active={active === 'audit'} />
-          </nav>
+            <nav className="hidden items-center gap-1 text-sm sm:flex">
+              <NavLink href="/how-it-works" label="How it works" active={active === 'guide'} />
+              <NavLink href="/" label="Deals" active={active === 'deals'} />
+              <NavLink href="/audit" label="Audit" active={active === 'audit'} />
+            </nav>
 
-          <div className="ml-auto flex items-center gap-2.5">
-            {/* Which CRM is live is meaningful to a reviewer — it is the
-                difference between a rehearsal and a real write. Which storage
-                backend is live is not, so it is not shown. */}
-            {salesforceMode === 'mock' ? (
-              <span
-                title="Approvals are written to Artificer's mock CRM, not to a live Salesforce org."
-                className="hidden items-center gap-1.5 rounded-full border border-chrome-line bg-chrome-soft px-2.5 py-1 text-2xs text-chrome-text sm:inline-flex"
-              >
-                <Database size={11} className="text-chrome-text/60" />
-                Demo CRM
-              </span>
-            ) : (
-              <span className="hidden items-center gap-1.5 rounded-full border border-emerald-400/40 bg-emerald-400/15 px-2.5 py-1 text-2xs font-medium text-emerald-300 sm:inline-flex">
-                <Database size={11} />
-                Live Salesforce
-              </span>
-            )}
-            <ReviewerBadge />
+            <div className="ml-auto flex min-w-0 items-center gap-2.5">
+              {salesforceMode === 'mock' ? (
+                <span
+                  title="Approvals are written to Artificer's mock CRM, not to a live Salesforce org."
+                  className="hidden items-center gap-1.5 rounded-full border border-chrome-line bg-chrome-soft px-2.5 py-1 text-2xs text-chrome-text md:inline-flex"
+                >
+                  <Database size={11} className="text-chrome-text/60" />
+                  Demo CRM
+                </span>
+              ) : (
+                <span className="hidden items-center gap-1.5 rounded-full border border-emerald-400/40 bg-emerald-400/15 px-2.5 py-1 text-2xs font-medium text-emerald-300 md:inline-flex">
+                  <Database size={11} />
+                  Live Salesforce
+                </span>
+              )}
+              <ReviewerBadge />
+            </div>
           </div>
+
+          <nav className="-mx-5 flex items-center gap-1 overflow-x-auto px-5 pb-1.5 text-sm sm:hidden">
+            <NavLink href="/how-it-works" label="How it works" active={active === 'guide'} compact />
+            <NavLink href="/" label="Deals" active={active === 'deals'} compact />
+            <NavLink href="/audit" label="Audit" active={active === 'audit'} compact />
+          </nav>
         </div>
       </header>
 
@@ -66,18 +73,34 @@ export function AppShell({
   );
 }
 
-function NavLink({ href, label, active }: { href: string; label: string; active: boolean }) {
+function NavLink({
+  href,
+  label,
+  active,
+  compact = false,
+}: {
+  href: string;
+  label: string;
+  active: boolean;
+  /** The phone row sits at the bottom of the header, so its rule hugs the link. */
+  compact?: boolean;
+}) {
   return (
     <Link
       href={href}
       aria-current={active ? 'page' : undefined}
-      className={`focus-ring relative rounded-md px-3 py-2 transition-colors ${
+      className={`focus-ring relative shrink-0 whitespace-nowrap rounded-md px-3 py-2 transition-colors ${
         active ? 'font-medium text-white' : 'text-chrome-text/70 hover:text-white'
       }`}
     >
       {label}
       {active ? (
-        <span aria-hidden className="absolute inset-x-3 -bottom-[0.8125rem] h-[2px] rounded-full bg-emerald-400" />
+        <span
+          aria-hidden
+          className={`absolute inset-x-3 h-[2px] rounded-full bg-emerald-400 ${
+            compact ? 'bottom-0.5' : '-bottom-[0.8125rem]'
+          }`}
+        />
       ) : null}
     </Link>
   );

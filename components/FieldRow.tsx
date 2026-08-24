@@ -58,7 +58,13 @@ export function FieldRow({
   return (
     <div
       onClick={onSelect}
-      className={`group relative grid cursor-pointer grid-cols-[minmax(0,11rem)_minmax(0,1fr)_auto] items-start gap-3 rounded-md border px-3 py-2.5 transition-colors ${
+      /*
+       * Phone: label and grade share the top line, the value gets the full width
+       * beneath them. A fixed label column starves the value at 375px — every
+       * figure truncated to "1…", which is worse than useless on a screen whose
+       * whole job is showing values.
+       */
+      className={`group relative grid cursor-pointer grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-1 rounded-md border px-3 py-2.5 transition-colors sm:grid-cols-[minmax(0,10rem)_minmax(0,1fr)_auto] sm:gap-3 ${
         active ? activeClassName : 'border-transparent hover:border-rule hover:bg-white'
       }`}
     >
@@ -66,7 +72,7 @@ export function FieldRow({
         <span aria-hidden className="absolute inset-y-1.5 left-0 w-[3px] rounded-full bg-amber-400" />
       ) : null}
 
-      <div className="pt-0.5">
+      <div className="order-1 pt-0.5 sm:order-none">
         <div className="text-xs font-medium text-ink">{spec.label}</div>
         {field.edited ? (
           <span className="mt-1 inline-flex items-center rounded border border-accent-ring bg-white px-1.5 py-px text-2xs font-medium text-accent">
@@ -75,7 +81,7 @@ export function FieldRow({
         ) : null}
       </div>
 
-      <div className="min-w-0">
+      <div className="order-3 col-span-2 min-w-0 sm:order-none sm:col-span-1">
         {editing ? (
           spec.enumValues ? (
             <select
@@ -148,7 +154,7 @@ export function FieldRow({
         ) : null}
       </div>
 
-      <div className="flex items-center gap-2 pt-0.5">
+      <div className="order-2 flex items-center justify-end gap-2 pt-0.5 sm:order-none">
         {field.sourceLocation ? (
           <Quote size={12} className={active ? 'text-accent' : 'text-ink-faint'} aria-label="Has a source citation" />
         ) : (

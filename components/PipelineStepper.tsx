@@ -30,9 +30,32 @@ export function PipelineStepper({
   recordHref?: string | null;
 }) {
   const currentIndex = STAGES.findIndex((s) => s.id === current);
+  const active = STAGES[currentIndex];
+  const ActiveIcon = active?.icon ?? FileUp;
 
   return (
-    <nav aria-label="Deal pipeline" className="flex items-stretch overflow-x-auto">
+    <>
+      {/* Four tiles will not fit on a phone without truncating every label into
+          nonsense, so a phone gets the same information as one readable line. */}
+      <nav
+        aria-label="Deal pipeline"
+        className="flex items-center gap-2.5 rounded-lg border border-property-ring bg-property-soft px-3 py-2 sm:hidden"
+      >
+        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white text-property ring-1 ring-inset ring-current">
+          <ActiveIcon size={12} />
+        </span>
+        <span className="min-w-0">
+          <span className="block truncate text-xs font-medium leading-tight text-property">
+            {active?.label}
+          </span>
+          <span className="block truncate text-2xs leading-tight text-ink-muted">{active?.hint}</span>
+        </span>
+        <span className="tnum ml-auto shrink-0 text-2xs text-ink-muted">
+          Step {currentIndex + 1} of {STAGES.length}
+        </span>
+      </nav>
+
+      <nav aria-label="Deal pipeline" className="hidden items-stretch overflow-x-auto sm:flex">
       {STAGES.map((stage, index) => {
         const complete = done.includes(stage.id) || index < currentIndex;
         const active = stage.id === current;
@@ -79,6 +102,7 @@ export function PipelineStepper({
           </span>
         );
       })}
-    </nav>
+      </nav>
+    </>
   );
 }

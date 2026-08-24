@@ -74,9 +74,15 @@ export interface WalkthroughState {
   done: StepId[];
   dismissed: boolean;
   collapsed: boolean;
+  /**
+   * True once the visitor has opened or closed the panel themselves. Until then
+   * the panel is free to choose its own default — collapsed on a phone, open on
+   * a desktop — without overriding a preference the visitor actually expressed.
+   */
+  touchedCollapse: boolean;
 }
 
-const EMPTY: WalkthroughState = { done: [], dismissed: false, collapsed: false };
+const EMPTY: WalkthroughState = { done: [], dismissed: false, collapsed: false, touchedCollapse: false };
 
 export function readWalkthrough(): WalkthroughState {
   if (typeof window === 'undefined') return EMPTY;
@@ -88,6 +94,7 @@ export function readWalkthrough(): WalkthroughState {
       done: Array.isArray(parsed.done) ? (parsed.done as StepId[]) : [],
       dismissed: Boolean(parsed.dismissed),
       collapsed: Boolean(parsed.collapsed),
+      touchedCollapse: Boolean(parsed.touchedCollapse),
     };
   } catch {
     return EMPTY;
@@ -112,7 +119,7 @@ export function completeStep(id: StepId): void {
 }
 
 export function setCollapsed(collapsed: boolean): void {
-  write({ ...readWalkthrough(), collapsed });
+  write({ ...readWalkthrough(), collapsed, touchedCollapse: true });
 }
 
 export function dismissWalkthrough(): void {
@@ -120,7 +127,7 @@ export function dismissWalkthrough(): void {
 }
 
 export function restartWalkthrough(): void {
-  write({ done: [], dismissed: false, collapsed: false });
+  write({ ...EMPTY });
 }
 
 /** The first incomplete step — what the panel should be pointing at. */
