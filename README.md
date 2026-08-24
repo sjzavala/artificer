@@ -9,6 +9,10 @@ person decides; the audit log records who decided what.
 
 There is no chat interface anywhere in the product, by design.
 
+It is also the **first domain service in a brokerage platform**, not a standalone
+app — the seams it is built on are the ones the next tools will share. See
+[Where this is going](#where-this-is-going).
+
 ---
 
 ## The workflow
@@ -80,6 +84,88 @@ engineering notes below, and `extractionMeta` on each stored deal, which keeps
 the model and token counts for anyone debugging an extraction.
 
 ---
+
+## Where this is going
+
+**Artificer is the first domain service in a brokerage platform, not a standalone
+app.** If more tools are coming — and they are — a monorepo is the better
+architecture to commit to now, while there is one service in it and the cost of
+the decision is near zero.
+
+```
+platform/
+  apps/
+    artificer/         deal intake — this
+    nnnpro-web/        the marketplace frontend
+    console/           internal broker tooling
+  packages/
+    domain/            the net-lease vocabulary — the load-bearing package
+    salesforce/        one adapter, one field mapping, shared
+    documents/         PDF → anchored paragraphs
+    extraction/        LLM + provenance verification
+    audit/             append-only log
+    ui/                design system
+  services/
+    sync/              Salesforce → read replica
+```
+
+The package that justifies the whole structure is **`domain`**. Artificer already
+proves the pattern in miniature: `shared/schema.ts` is a single field registry
+that drives the extraction prompt, the approval UI, the Salesforce mapping and
+the eval harness — with a test that fails if any of them drift apart. Promote
+that to `@platform/domain` and the same definition drives the marketplace's
+filters, the sync's column mapping, and whatever tool comes third. One answer to
+"what is a net-lease deal", enforced by the compiler rather than by convention.
+
+### What is already shaped for it
+
+Not aspiration — these seams exist and are covered by contract tests run against
+more than one implementation, which is what makes them safe to extract:
+
+| Seam | Today | Extracts to |
+| --- | --- | --- |
+| `Store` | local files / Vercel Blob | `packages/storage` |
+| `SalesforceAdapter` | mock / real jsforce | `packages/salesforce` |
+| `shared/schema.ts` | one field registry | `packages/domain` |
+| PDF → anchored paragraphs | `lib/extraction/pdf.ts` | `packages/documents` |
+| Append-only audit | `lib/audit.ts` | `packages/audit` |
+
+### What should not be extracted yet
+
+`ui`. There is no second consumer, and a design system pulled out before one
+exists is one app's internals wearing a costume. Extract it when the second app
+needs it and the shape is known — not before.
+
+More generally: the failure mode of a monorepo is packages that were never really
+shared. The seams above earned their interfaces by having two implementations
+each. Nothing else has.
+
+### The open question
+
+Whether **Surmount** — the API serving nnnpro.com — is in-house or a vendor.
+
+- **In-house:** Artificer belongs inside that platform and shares its domain
+  package; the sync becomes a first-class service in the same repo.
+- **Vendor:** Artificer sits beside it, and Salesforce is the only contract
+  between them — which is roughly the boundary it already respects.
+
+That single fact changes the structure, and it is cheap to answer and expensive
+to guess at. It is worth settling before any code moves.
+
+### Candidate next services
+
+Each reuses `domain`, `documents` and `audit` rather than reimplementing them:
+
+- **Lease abstraction** — the same extraction pipeline pointed at executed leases
+  rather than offering memos, where the provenance requirement is stricter still.
+- **Listing composer** — the OM drafter, aimed at the marketplace. It already
+  emits `{title, body}` highlights, which is exactly the shape of the
+  `highlights[]` array on a listing.
+- **Comp set / valuation** — reads the same Salesforce records rather than
+  re-extracting them.
+
+Everything above is a plan, not built. What exists today is the single app
+described in the rest of this document.
 
 ## Local setup
 
