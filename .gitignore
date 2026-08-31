@@ -25,7 +25,6 @@ dist/
 
 # eval output
 evals/results/
-evals/samples/*.pdf
 
 # vercel
 .vercel

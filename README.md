@@ -197,12 +197,40 @@ the built-in walkthrough then runs you through them: it takes you from the sampl
 citation, a correction, an approval, the CRM record and an OM draft, ticking off
 each step as you actually perform it.
 
+### Demo documents
+
+The walkthrough runs on the seeded deal, which is already extracted. To show the
+step before that — a document going in and structured data coming out — you need
+a PDF to drop on the upload area. Three are committed under `evals/samples/`, so
+a fresh clone is ready to demo with no extra step.
+
+| File | Shows |
+| --- | --- |
+| `industrial-sale-leaseback-tempe-az.pdf` | **The one to demo.** No guarantor is named anywhere and the memo says outright that the tenant is unrated, so three fields come back `not_found`. The landlord keeps roof and structure, so the lease is `NN` and not the `absolute NNN` the phrasing invites. Remaining term is never stated and cannot be computed — that is the flagged field to resolve by hand. |
+| `qsr-ground-lease-round-rock-tx.pdf` | The happy path. A tidy memo where nearly every field is stated outright and graded high. Useful first if you want the contrast before the Arizona one. |
+| `dollar-general-mount-vernon-oh.pdf` | Already seeded as the sample deal — uploading it again only duplicates what the walkthrough covers. |
+
+Each is fictional and watermarked *FICTIONAL SAMPLE* on every page, so it is safe
+in front of an audience. The absences are the point: a field the model declines
+to answer is the behaviour worth showing, because an invented one looks exactly
+like a real one.
+
+The PDFs are committed even though they are generated output, because a demo
+that requires a build step before it can start is a demo that fails in front of
+someone. `evals/sample-content.ts` remains the source of truth — generation is
+pinned to a fixed timestamp and is byte-for-byte reproducible, so the samples
+cannot quietly drift from it:
+
+```bash
+npm run generate-samples && git diff --exit-code evals/samples   # clean ⇒ in sync
+```
+
 ### Useful scripts
 
 | Command | What it does |
 | --- | --- |
 | `npm run dev` | Development server. |
-| `npm test` | Vitest — 158 unit tests. |
+| `npm test` | Vitest — 172 unit tests. |
 | `npm run typecheck` | `tsc --noEmit`. |
 | `npm run seed` | Plants the sample deal (idempotent; `-- --force` replaces). |
 | `npm run reset-demo -- --yes` | Wipes a store and reseeds it to the intended first impression. |

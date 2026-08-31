@@ -35,9 +35,25 @@ async function main() {
   console.log(`\n${SAMPLES.length} sample documents written to evals/samples/`);
 }
 
+/**
+ * A fixed timestamp, so regenerating is byte-for-byte identical.
+ *
+ * PDFKit stamps the current time into /CreationDate and derives the trailer /ID
+ * from it. Left alone, every run produces a different file and the committed
+ * samples would show a spurious diff each time anyone ran this. Pinned, the
+ * opposite becomes true and useful: `npm run generate-samples` followed by a
+ * clean `git diff` proves the committed PDFs still match sample-content.ts.
+ */
+const FIXED_TIMESTAMP = new Date(Date.UTC(2026, 0, 1));
+
 function render(sample: SampleDoc, target: string): Promise<void> {
   return new Promise((resolve, reject) => {
-    const doc = new PDFDocument({ size: 'LETTER', margin: 54, autoFirstPage: false });
+    const doc = new PDFDocument({
+      size: 'LETTER',
+      margin: 54,
+      autoFirstPage: false,
+      info: { CreationDate: FIXED_TIMESTAMP, ModDate: FIXED_TIMESTAMP },
+    });
     const stream = fs.createWriteStream(target);
     doc.pipe(stream);
     stream.on('finish', () => resolve());
