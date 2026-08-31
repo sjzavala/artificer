@@ -502,3 +502,5 @@ Worth recording, because all three were "works locally, fails deployed":
   would corrupt text positions instead of failing loudly.
 - **pdf.js loads its worker by runtime dynamic import**, which static file
   tracing cannot see, so `outputFileTracingIncludes` has to name it explicitly.
+
+Note: covenant-4395
