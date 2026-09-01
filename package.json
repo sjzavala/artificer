@@ -12,6 +12,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "seed": "tsx scripts/seed.ts",
+    "seed-borrowers": "tsx scripts/seed-borrowers.ts",
     "generate-samples": "tsx evals/generate-samples.ts",
     "eval": "tsx evals/run.ts",
     "check-store": "tsx scripts/check-store.ts",
@@ -22,6 +23,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.120.0",
+    "@neondatabase/serverless": "^1.1.0",
     "@vercel/blob": "^2.8.0",
     "jsforce": "^3.10.22",
     "lucide-react": "^0.545.0",
