@@ -114,16 +114,42 @@ const SEED_COLUMNS = [
   'submitted_at',
 ];
 
+export interface MigrationResult {
+  /** What the schema step did — the table is created only once. */
+  schema: 'ensured';
+  /** Rows loaded, or null when the table already held data and was left alone. */
+  seeded: number | null;
+  /** Rows present afterwards. */
+  total: number;
+}
+
 /**
- * Creates the table and loads the sixty-row fixture. Idempotent: run it as
- * often as you like, and the table ends up in the same state.
+ * Brings the borrower table up to date, and seeds it only when it is empty.
+ *
+ * The empty check is the whole point, because this runs on every deploy. An
+ * unconditional TRUNCATE would be idempotent in the sense of always producing
+ * the same table — and would silently discard every status decision made since
+ * the last release. "The same sixty rows" is the right outcome for a database
+ * that has never been seeded and a data-loss bug for one that has.
+ *
+ * Pass `reseed` to force the destructive path; that is what a demo reset wants
+ * and what a deploy must never do by default.
  */
-export async function migrateAndSeed(url: string): Promise<{ borrowers: number }> {
+export async function migrateBorrowers(
+  url: string,
+  { reseed = false }: { reseed?: boolean } = {},
+): Promise<MigrationResult> {
   const sql = neon(url);
 
   await sql.query(BORROWER_SCHEMA_SQL);
   for (const statement of BORROWER_INDEX_SQL) {
     await sql.query(statement);
+  }
+
+  const counted = (await sql.query('SELECT count(*)::int AS n FROM borrowers')) as { n: number }[];
+  const before = Number(counted[0]?.n ?? 0);
+  if (before > 0 && !reseed) {
+    return { schema: 'ensured', seeded: null, total: before };
   }
 
   const rows = seedBorrowers();
@@ -145,14 +171,15 @@ export async function migrateAndSeed(url: string): Promise<{ borrowers: number }
     return `(${SEED_COLUMNS.map((_, c) => `$${base + c + 1}`).join(', ')})`;
   });
 
+  if (before > 0) await sql.query('TRUNCATE TABLE borrowers');
+
   // One statement rather than sixty round trips — over HTTP each one is its own
   // request, so the difference is not academic. Parameters are bound, not
   // interpolated, even though this fixture never contains user input.
-  await sql.query(`TRUNCATE TABLE borrowers`);
   await sql.query(
     `INSERT INTO borrowers (${SEED_COLUMNS.join(', ')}) VALUES ${tuples.join(', ')}`,
     values,
   );
 
-  return { borrowers: rows.length };
+  return { schema: 'ensured', seeded: rows.length, total: rows.length };
 }
