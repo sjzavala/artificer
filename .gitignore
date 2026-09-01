@@ -42,3 +42,10 @@ yarn-error.log*
 .vscode/
 *.tsbuildinfo
 .env*
+
+# agent skills — skill definitions fetched by local tooling, the symlinks under
+# .claude/skills that point into them, and their lockfile. Local development
+# aids, not part of the app: nothing in the build or the deploy reads them.
+.agents/
+.claude/skills/
+skills-lock.json
