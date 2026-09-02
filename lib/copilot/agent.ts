@@ -82,10 +82,23 @@ const SYSTEM_PROMPT = [
   'listing range as what something is worth. You still have no closed comps, no rent surveys',
   'and nothing else outside this system — be straight about that rather than filling the gap.',
   '',
-  '## Tone',
+  '## Length and format',
   '',
-  'Brief and concrete. Lead with the answer. Name the entity and the contact, give the figure',
-  'that decides it, and say what you would do next. A broker is deciding who to phone.',
+  'Be short. A broker is deciding who to phone, not reading a report, and every extra',
+  'sentence is time they spend waiting for the screen. Most answers are two or three',
+  'sentences. A long one is a short paragraph and a list.',
+  '',
+  'Lead with the answer in the first line — the name, the number, the recommendation. Then',
+  'only what is needed to act on it.',
+  '',
+  'Write prose and short lists. No section headings, no horizontal rules, no bold on every',
+  'other phrase. Use a table only when genuinely comparing several things across the same',
+  'columns, and keep it to the columns that decide something. Do not restate a lookup that',
+  'is already shown above your answer — the broker can open it.',
+  '',
+  'Say the figure that matters and stop. "Ironwood fits — 6.75% is inside their 6.25–7.25%',
+  'band, they buy Ohio retail, and they have the equity" beats the same content under three',
+  'headings.',
 ].join('\n');
 
 export class CopilotError extends Error {
@@ -115,6 +128,10 @@ export async function runCopilot(
   messages.push({ role: 'user', content: question });
 
   const toolRuns: ToolRun[] = [];
+  /** Where the wall clock actually goes, per turn — model time versus lookups. */
+  const timings: string[] = [];
+  let modelMs = 0;
+  let toolMs = 0;
   let inputTokens = 0;
   let outputTokens = 0;
   let cacheReadTokens = 0;
@@ -124,6 +141,7 @@ export async function runCopilot(
 
   for (let iteration = 0; iteration < MAX_ITERATIONS; iteration += 1) {
     let response: Anthropic.Message;
+    const turnStarted = Date.now();
     try {
       response = await client.messages.create({
         model,
@@ -139,6 +157,10 @@ export async function runCopilot(
       const described = describeApiError(error);
       throw new CopilotError(described ?? 'Could not reach the Anthropic API. Try again shortly.');
     }
+
+    const thisTurnMs = Date.now() - turnStarted;
+    modelMs += thisTurnMs;
+    timings.push(`t${iteration + 1}=${thisTurnMs}ms/${response.usage.output_tokens}tok`);
 
     inputTokens += response.usage.input_tokens;
     outputTokens += response.usage.output_tokens;
@@ -170,12 +192,16 @@ export async function runCopilot(
     // Calls in one turn are independent, so they run together. All their results
     // go back in a single user message: splitting them across several messages
     // teaches the model to stop asking for more than one thing at a time.
+    const toolsStarted = Date.now();
     const settled = await Promise.all(
       calls.map(async (call) => ({
         call,
         run: await runTool(call.name, (call.input ?? {}) as Record<string, unknown>),
       })),
     );
+    const thisToolMs = Date.now() - toolsStarted;
+    toolMs += thisToolMs;
+    timings.push(`tools(${calls.length})=${thisToolMs}ms`);
 
     const results: Anthropic.ToolResultBlockParam[] = settled.map(({ call, run }) => {
       toolRuns.push(run);
@@ -211,7 +237,8 @@ export async function runCopilot(
   console.log(
     `[artificer] copilot model=${model} tools=${toolRuns.map((t) => t.name).join(',') || 'none'} ` +
       `in=${inputTokens} out=${outputTokens} cacheRead=${cacheReadTokens} ` +
-      `ms=${reply.durationMs} truncated=${truncated}`,
+      `ms=${reply.durationMs} model=${modelMs}ms tools=${toolMs}ms truncated=${truncated} ` +
+      `[${timings.join(' ')}]`,
   );
 
   return reply;
