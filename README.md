@@ -1,13 +1,33 @@
 # Artificer
 
-Artificer is a **tool, not a chatbot**: you drop in a net-lease deal document, it
-extracts the structured deal data with a confidence grade and a verbatim source
-citation for every field, and you review it side by side with the document.
+Artificer is net-lease deal software for a brokerage. It does four things:
+
+- **Deal intake.** Drop in an offering memo, lease or LOI and it extracts 24
+  structured fields, each with a confidence grade and the verbatim passage it
+  came from, reviewed side by side with the document.
+- **Ask the document.** Anything the 24 fields do not cover — a termination
+  right, who carries roof and structure — answered with passages checked against
+  the document rather than merely quoted.
+- **A buyer pipeline.** Who is looking, what they will pay for, and how long
+  they have; 1031 exchange buyers carry a 45-day identification clock that does
+  not stop.
+- **A copilot.** One place to ask across all of it, including the question the
+  business actually turns on — *who do I call about this deal?* — plus what
+  comparable property is currently listed at on the open market.
 
 Nothing reaches Salesforce until a human clicks approve. The AI drafts; the
-person decides; the audit log records who decided what.
+person decides; the audit log records who decided what. The copilot can read
+everything and change nothing, and that is structural rather than a rule it
+follows — there is no write tool for it to reach.
 
-There is no chat interface anywhere in the product, by design.
+> **A principle that changed.** This file used to say "there is no chat
+> interface anywhere in the product, by design", and meant it. Two of the four
+> capabilities above are now conversational, because some questions genuinely do
+> not fit a form: *who should I call about this deal*, *what will they push back
+> on*, *how does this price against the market*. What the original rule was
+> protecting has survived intact — every factual claim is retrieved rather than
+> recalled, every passage is verified before it is shown, and no assistant
+> writes anything. The interface changed; the constraints did not.
 
 It is also the **first domain service in a brokerage platform**, not a standalone
 app — the seams it is built on are the ones the next tools will share. See
@@ -82,6 +102,107 @@ entries, the provenance line on a reviewed deal. The underlying model is named
 only where it has to be literally true: the `ANTHROPIC_MODEL` variable, the
 engineering notes below, and `extractionMeta` on each stored deal, which keeps
 the model and token counts for anyone debugging an extraction.
+
+---
+
+## Beyond deal intake
+
+The workflow above is one of four capabilities. The other three arrived later and
+share its machinery rather than duplicating it.
+
+### Ask the document
+
+The extraction answers 24 questions decided in advance. A box on the review
+screen answers the rest — lease clauses, landlord obligations, what the memo says
+about a market.
+
+The point is that the citations are **checked**. Most "chat with your PDF"
+features ask the model to cite and then trust the citation, which makes a
+fabricated quote indistinguishable from a real one. Every passage here goes
+through `resolveAnchor`, the same function the extraction pipeline uses, and
+takes one of three paths:
+
+| Outcome | What happens |
+| --- | --- |
+| Quote found in the paragraph it named | The citation stands. |
+| Quote found somewhere else | The anchor is corrected — the quote is the evidence, the id was only bookkeeping. |
+| Quote not in the document | Dropped, and its `[n]` marker stripped from the prose so it cannot point at nothing. |
+
+If every passage offered for an answer was invented, the answer is returned but
+labelled unsupported rather than rendered as fact.
+
+The document sits behind a prompt-cache breakpoint and the question after it, so
+a lease is paid for once rather than per question — measured at 37 input tokens
+against 1,920 read from cache.
+
+### The buyer pipeline
+
+The book of buyers a deal gets matched against: the purchasing entity and the
+contact, equity available, the cap rate band they will transact in, the asset
+classes and states they buy in, and the weakest lease guaranty they will accept.
+
+A buyer is defined in the deal schema's own terms — `shared/buyer.ts` imports
+`PROPERTY_TYPES` and `GUARANTOR_TYPES` from `shared/schema.ts` rather than
+restating them, which is what makes matching a comparison instead of a
+translation.
+
+A 1031 exchange buyer carries two statutory clocks: 45 days from their sale
+closing to identify replacement property in writing, 180 to close. Both are
+derived from that date and never stored — a stored deadline is one that can
+disagree with the date it came from. A window that has closed is shown as closed
+rather than hidden, because there is no extension in the statute and someone
+needs to know why a buyer went quiet.
+
+### The copilot
+
+Seven tools, all reads: the deal pipeline, every extracted field with its
+confidence, the documents, the buyer book, deal-to-buyer matching, the audit log,
+and live listings from the NNN Pro marketplace.
+
+**The matching is ordinary code, not model judgement.** Five comparisons — cap
+rate band, market, asset class, guaranty floor, and whether the equity covers the
+cheque — run the same way every time and are covered by tests. A model eyeballing
+sixty buyers against a numeric band is roughly right and occasionally, silently
+wrong. The model decides *when* to ask and how to explain; it does not compute.
+
+Three details the domain forced:
+
+- A guaranty floor is a **ranking**, not equality: a buyer who accepts
+  `franchisee` also accepts `corporate`. Backwards, this quietly offers
+  franchisee deals to institutions.
+- An all-cash buyer is held to the whole price, a financed one to a down payment.
+  Holding everyone to the full number hides most of the market from every deal,
+  so the reason string says "assumes 35% down" rather than passing an assumption
+  off as a fact.
+- **A test the document cannot answer passes rather than fails.** Excluding a
+  buyer because the memo never stated the guarantor would narrow the list on the
+  strength of a gap. The gap is reported instead.
+
+Near misses come back alongside fits, with the single test each failed — a buyer
+a quarter point outside the band is a phone call, not a rejection.
+
+Every lookup is shown above the answer and can be opened. The assistant cannot
+act, so there is no cost to exposing its working and every reason to: "eleven
+buyers fit" is a claim, and the scoring behind it is something to check before
+picking up the phone.
+
+### Market data
+
+`search_market_listings` reads the NNN Pro marketplace — the only view Artificer
+has of anything outside itself.
+
+Two things about that data are load-bearing. **Cap rate is not in the response**;
+it is derived from NOI over price, as the marketplace's own front end does. And
+**these are asking prices, not trades** — a seller asking 6.75% is evidence about
+a market, not proof of one. That distinction is enforced in three places: the
+type is `Listing` rather than `Comp`, the payload carries a `note` field, and the
+prompt tells the model to write "currently listed at" rather than "trading at".
+
+The endpoint is undocumented, so it is treated as weather: defensive parsing,
+money arriving as decimal strings, state arriving as `US_FL` or `Florida` or `FL`
+in the same column, an 8-second timeout, a 5-minute cache, and a failure that
+degrades to "answer from what is in Artificer instead" rather than taking the
+reply down. `SURMOUNT_API_URL` points it elsewhere if a real contract appears.
 
 ---
 
@@ -160,12 +281,20 @@ Each reuses `domain`, `documents` and `audit` rather than reimplementing them:
   rather than offering memos, where the provenance requirement is stricter still.
 - **Listing composer** — the OM drafter, aimed at the marketplace. It already
   emits `{title, body}` highlights, which is exactly the shape of the
-  `highlights[]` array on a listing.
+  `highlights[]` array on a listing. That was a guess when it was written and is
+  now confirmed: a live listing carries
+  `{"title": "Absolute NNN Corporate Guarantee", "body": "…", "number": 1}`.
+  The drafter's output would need a `number` and nothing else.
 - **Comp set / valuation** — reads the same Salesforce records rather than
   re-extracting them.
 
-Everything above is a plan, not built. What exists today is the single app
-described in the rest of this document.
+The monorepo above is a plan, not built. What exists today is the single app
+described in the rest of this document — though "single app" now means four
+capabilities rather than one workflow, and the copilot has already made the case
+for `domain` better than the argument did. It can answer "who do I call about
+this deal" only because a buyer's `propertyTypes` and `minGuarantor` *are* the
+deal schema's `PROPERTY_TYPES` and `GUARANTOR_TYPES`, imported rather than
+restated. That is the whole thesis, working, inside one repository.
 
 ## Local setup
 
@@ -230,9 +359,10 @@ npm run generate-samples && git diff --exit-code evals/samples   # clean ⇒ in 
 | Command | What it does |
 | --- | --- |
 | `npm run dev` | Development server. |
-| `npm test` | Vitest — 172 unit tests. |
+| `npm test` | Vitest — 284 unit tests. |
 | `npm run typecheck` | `tsc --noEmit`. |
 | `npm run seed` | Plants the sample deal (idempotent; `-- --force` replaces). |
+| `npm run seed-buyers` | Ensures the buyer table and seeds it **only if empty** — safe on every deploy, and what `build` runs. `-- --reseed` discards and reloads, which is also what refreshes the 1031 clocks. |
 | `npm run reset-demo -- --yes` | Wipes a store and reseeds it to the intended first impression. |
 | `npm run generate-samples` | Renders the three sample offering memos to PDF. |
 | `npm run eval` | Scores extraction against ground truth. |
@@ -251,6 +381,9 @@ npm run generate-samples && git diff --exit-code evals/samples   # clean ⇒ in 
 | `ANTHROPIC_MODEL` | no | Defaults to `claude-sonnet-4-6`. |
 | `ARTIFICER_ACCESS_CODE` | yes | The shared code on the gate page. |
 | `ARTIFICER_SESSION_SECRET` | yes | HMAC key for the session cookie. 32+ bytes. |
+| `DATABASE_URL` | buyers | Postgres for the buyer pipeline. `POSTGRES_URL` (which the Vercel integration sets) is accepted too. Absent ⇒ an in-memory fixture, and the page says so. |
+| `BUYER_PIPELINE_REPO` | no | Force `postgres` or `memory`, overriding the above. |
+| `SURMOUNT_API_URL` | no | Points the market lookup at something other than `https://api.surmount.com`. |
 | `BLOB_READ_WRITE_TOKEN` | prod | Present ⇒ the Vercel Blob store activates. |
 | `ARTIFICER_STORE` | no | Force `local` or `blob`, overriding the above. |
 | `ARTIFICER_DATA_DIR` | no | Where `LocalFileStore` writes. Defaults to `./data`. |
@@ -264,36 +397,51 @@ npm run generate-samples && git diff --exit-code evals/samples   # clean ⇒ in 
 ```mermaid
 flowchart LR
     subgraph browser["Browser"]
-        UI["Approval screen<br/>Deals · Audit · Record"]
+        UI["Deals · Buyers · Copilot · Audit"]
     end
 
     subgraph server["Next.js server — the only place the API key exists"]
         MW["Middleware<br/><i>access gate on every route</i>"]
-        API["API routes<br/>extract · field · approve · reject · om-draft"]
+        API["API routes<br/>extract · field · approve · ask · buyers · copilot"]
         EX["lib/extraction<br/>pdf → prompt → parse → anchor"]
-        SCHEMA[["shared/schema.ts<br/><b>single source of truth</b>"]]
+        ASK["lib/ask<br/><i>question → verified passages</i>"]
+        COP["lib/copilot<br/><i>tool loop · deal↔buyer match</i>"]
+        SCHEMA[["shared/schema.ts + shared/buyer.ts<br/><b>single source of truth</b>"]]
     end
 
     subgraph seams["Adapter seams"]
         STORE{{"Store"}}
+        REPO{{"BuyerRepo"}}
         SF{{"SalesforceAdapter"}}
     end
 
     LOCAL["LocalFileStore<br/><i>/data JSON</i>"]
     BLOB["BlobStore<br/><i>private Vercel Blob</i>"]
+    PG["PostgresBuyerRepo<br/><i>Neon</i>"]
+    MEM["InMemoryBuyerRepo<br/><i>fixture</i>"]
     MOCK["MockSalesforceAdapter<br/><i>default</i>"]
     REAL["RealSalesforceAdapter<br/><i>jsforce</i>"]
     MODEL(["Anthropic API"])
+    MARKET(["NNN Pro marketplace<br/><i>listings — asking, not traded</i>"])
 
     UI --> MW --> API
     API --> EX --> MODEL
+    API --> ASK --> MODEL
+    API --> COP --> MODEL
+    COP -.->|"reads"| EX
+    COP -.->|"reads"| ASK
+    COP --> MARKET
     API --> STORE
+    API --> REPO
     API --> SF
     SCHEMA -.->|"drives the prompt"| EX
     SCHEMA -.->|"drives the UI"| UI
     SCHEMA -.->|"drives the eval"| EVAL["evals/"]
+    SCHEMA -.->|"drives the match"| COP
     STORE --> LOCAL
     STORE --> BLOB
+    REPO --> PG
+    REPO --> MEM
     SF --> MOCK
     SF --> REAL
 
@@ -389,13 +537,25 @@ unaffected, since the storage namespace does not depend on it.
 
 ## Storage
 
-One interface, two implementations, chosen by environment:
+Two stores, for two shapes of data.
+
+**Deals, drafts and the audit log** are documents, and live in a JSON store —
+one interface, two implementations, chosen by environment:
 
 - **`LocalFileStore`** — JSON files under `/data` (gitignored). Used in development.
 - **`BlobStore`** — the same JSON documents as objects in a **private** Vercel Blob
   store. Used in production, activated by the presence of `BLOB_READ_WRITE_TOKEN`.
   Private matters: the app's access gate would be beside the point if the deal
   data underneath it were readable by URL.
+
+**Buyers are rows**, and live in Postgres (Neon), because the pipeline is a
+filtered, sorted, paged query over structured criteria and that is what SQL is
+for. The same seam applies: `PostgresBuyerRepo` in deployment, an in-memory
+fixture when no connection string is set, and `BUYER_PIPELINE_REPO` to force
+either. `npm run seed-buyers` creates the table and seeds it only when it is
+empty — an unconditional reload would be idempotent in the sense of always
+producing the same sixty rows, and would discard every pipeline decision made
+since the last release.
 
 Nothing above the seam knows which is live, and the UI does not show which is —
 it is not information a reviewer needs. To exercise the live adapter against the
@@ -516,6 +676,24 @@ hashing, the access gate, and the eval harness's own comparison logic.
 Both the storage and Salesforce suites are written as *contract* tests run
 against more than one implementation, so the interfaces are proven substitutable
 rather than merely declared to be.
+
+The later features brought their own, and several are worth naming because they
+exist to stop a specific mistake recurring:
+
+- **Citation verification** is tested against what happens when the model is
+  wrong, not when it is right: a fabricated quote, a real quote filed under the
+  wrong paragraph, an answer mixing both, and a quote that appears only in the
+  *question* rather than the document.
+- **The 1031 clock** covers month boundaries and leap years, and asserts that a
+  passed window sorts and filters as passed rather than as urgent.
+- **The buyer match** pins the guaranty ranking (a `franchisee` floor accepts
+  `corporate`, not the reverse), the cash-versus-financed capital test, and that
+  a fact the document never stated passes rather than excludes.
+- **The market client** is tested against the endpoint misbehaving — a payload
+  that changed shape, money as decimal strings, an outage — and against the
+  query pattern that once silently lost a third of the matches.
+- **The fixture** asserts its own anchors are unique, after a generated contact
+  name appeared to represent three unrelated firms.
 
 ---
 
