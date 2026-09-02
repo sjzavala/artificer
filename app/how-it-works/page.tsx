@@ -1,11 +1,16 @@
 import Link from 'next/link';
 import {
   ArrowRight,
+  CalendarClock,
+  Crosshair,
   Database,
   FileUp,
+  MessageCircleQuestion,
   Quote,
   ScanLine,
   ShieldCheck,
+  Sparkles,
+  Users,
 } from 'lucide-react';
 import { AppShell } from '@/components/AppShell';
 import { PipelineStepper } from '@/components/PipelineStepper';
@@ -33,8 +38,9 @@ export default async function HowItWorksPage() {
           </h1>
           <p className="mt-3 text-[0.9375rem] leading-relaxed text-ink-soft">
             Artificer reads a net-lease deal document and turns it into structured data you can
-            review. It is a tool, not an assistant: there is no chat, one workflow, and a single
-            decision at the end that only a person can make.
+            review, and keeps the book of buyers that data gets matched against. It is bounded on
+            purpose: it answers from your documents and your pipeline, it shows you where every
+            answer came from, and the decisions that matter are still yours.
           </p>
         </header>
 
@@ -223,6 +229,98 @@ export default async function HowItWorksPage() {
           </div>
         </section>
 
+        {/* ---- Asking the document ------------------------------------------- */}
+        <section className="mt-12">
+          <SectionHeading>Asking a document a question</SectionHeading>
+
+          <p className="mt-4 max-w-3xl text-sm leading-relaxed text-ink-soft">
+            The extraction answers {FIELD_COUNT} questions decided in advance. For everything else
+            there is a box above the extracted data on the review screen: ask about the document
+            open beside it — <Strong>who carries roof and structure</Strong>, <Strong>what happens
+            on casualty</Strong>, <Strong>is there a termination right</Strong> — and the answer
+            comes back footnoted.
+          </p>
+
+          <p className="mt-3 max-w-3xl text-sm leading-relaxed text-ink-soft">
+            The footnotes are the feature. Each one is a numbered button; clicking it jumps the
+            document pane to that paragraph and highlights the exact sentence, the same way a
+            field&rsquo;s citation does. And before any of them reach you, every quoted passage is
+            searched for in the document.
+          </p>
+
+          <div className="mt-5 grid gap-3 sm:grid-cols-3">
+            <CitationPath
+              tone="good"
+              icon={<Quote size={14} />}
+              title="Found where it said"
+              body="The passage is in the document, in the paragraph the model pointed at. The citation stands."
+            />
+            <CitationPath
+              tone="warn"
+              icon={<Crosshair size={14} />}
+              title="Found somewhere else"
+              body="The passage is real but filed under the wrong paragraph. The quote is the evidence, so the pointer is corrected rather than the answer discarded."
+            />
+            <CitationPath
+              tone="bad"
+              icon={<ShieldCheck size={14} />}
+              title="Not in the document"
+              body="The passage does not exist. The citation is dropped and its marker removed — and if every passage for an answer was invented, the answer is shown as unverified rather than as fact."
+            />
+          </div>
+
+          <p className="mt-4 max-w-3xl text-xs leading-relaxed text-ink-muted">
+            It answers from the document and nothing else. Ask about something the memo does not
+            cover and it says so, and tells you what the document does address instead — it will
+            not fill the gap from general knowledge of how these deals usually work.
+          </p>
+        </section>
+
+        {/* ---- The buyer pipeline -------------------------------------------- */}
+        <section className="mt-12">
+          <SectionHeading>The buyer pipeline</SectionHeading>
+
+          <p className="mt-4 max-w-3xl text-sm leading-relaxed text-ink-soft">
+            A deal is only half the job; the other half is knowing who to call. The
+            <Strong> Buyers</Strong> tab holds the book — the purchasing entity and the person
+            behind it, equity available, the cap rate band they will transact in, the asset classes
+            and states they buy in, and the weakest lease guaranty they will accept. The same words
+            the extraction uses, so the two sides describe a deal identically.
+          </p>
+
+          <div className="mt-5 grid gap-4 sm:grid-cols-3">
+            <StageCard
+              n="01"
+              icon={<Users size={15} />}
+              tone="property"
+              title="Who is looking"
+              body="Filter by status, capital source, market, asset class, guaranty and equity available. Every count reflects the filters, so the number at the top is the size of the answer, not of the book."
+              note="Move a buyer through active, under contract, closed and inactive as the deal progresses."
+            />
+            <StageCard
+              n="02"
+              icon={<CalendarClock size={15} />}
+              tone="lease"
+              title="The 1031 clock"
+              body="A buyer in an exchange has 45 days from their sale closing to identify replacement property and 180 to close. Both are shown as time remaining, counted from the closing date rather than stored."
+              note="Inside two weeks turns amber, inside a week red. There is no extension in the statute, so a window that has closed is shown as closed rather than hidden."
+            />
+            <StageCard
+              n="03"
+              icon={<Sparkles size={15} />}
+              tone="econ"
+              title="Ask in plain English"
+              body="“Exchange buyers who need to identify within two weeks” sets the capital source, the deadline window and the sort order in one go."
+              note="The filters it chose land in the controls, so you can see the reading it took and adjust it rather than trust a list of names."
+            />
+          </div>
+
+          <p className="mt-4 max-w-3xl text-xs leading-relaxed text-ink-muted">
+            Status changes are written to the same audit log as everything else, with who made them
+            and when. Moving a buyer to closed is a decision someone will ask about later.
+          </p>
+        </section>
+
         {/* ---- Principles ---------------------------------------------------- */}
         <section className="mt-12">
           <SectionHeading>What it will and will not do</SectionHeading>
@@ -251,7 +349,17 @@ export default async function HowItWorksPage() {
             <Principle
               tone="bad"
               title="It will not quietly change its mind"
-              body="Every upload, extraction, edit, approval and rejection is written to an append-only audit log with who did it and when."
+              body="Every upload, extraction, edit, approval, rejection and buyer status change is written to an append-only audit log with who did it and when."
+            />
+            <Principle
+              tone="bad"
+              title="It will not answer from outside your documents"
+              body="Ask the assistant something the document does not cover and it says so. It will not reason from how net-lease deals usually work — you need to know what this document says, not what a typical one would."
+            />
+            <Principle
+              tone="good"
+              title="It will show you when it got a citation wrong"
+              body="A quoted passage that is not in the document is dropped rather than displayed, and an answer whose every passage failed that check is labelled unverified. You are told when the machine was wrong, not just when it was right."
             />
           </div>
         </section>
@@ -261,15 +369,25 @@ export default async function HowItWorksPage() {
           <h2 className="display text-lg font-semibold tracking-tight text-accent">Try it on the sample deal</h2>
           <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-ink-soft">
             A Dollar General offering memo, already extracted. Two fields are flagged — one of them
-            because the memo contradicts itself about the building size. See whether you catch it.
+            because the memo contradicts itself about the building size. See whether you catch it,
+            then ask the document something the extraction did not cover.
           </p>
-          <Link
-            href={sampleHref}
-            className="focus-ring group mt-4 inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-accent-hover"
-          >
-            Open the sample deal
-            <ArrowRight size={15} className="transition-transform group-hover:translate-x-0.5" />
-          </Link>
+          <div className="mt-4 flex flex-wrap items-center gap-2.5">
+            <Link
+              href={sampleHref}
+              className="focus-ring group inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-accent-hover"
+            >
+              Open the sample deal
+              <ArrowRight size={15} className="transition-transform group-hover:translate-x-0.5" />
+            </Link>
+            <Link
+              href="/buyers"
+              className="focus-ring group inline-flex items-center gap-2 rounded-lg border border-accent-ring bg-white px-4 py-2.5 text-sm font-medium text-accent transition-colors hover:border-accent"
+            >
+              <Users size={15} />
+              See the buyer pipeline
+            </Link>
+          </div>
         </section>
       </main>
     </AppShell>
@@ -346,6 +464,37 @@ function Step({ n, title, body }: { n: number; title: string; body: React.ReactN
         <p className="mt-1 text-xs leading-relaxed text-ink-soft">{body}</p>
       </div>
     </li>
+  );
+}
+
+/** One of the three things that can happen to a passage the assistant cites. */
+function CitationPath({
+  tone,
+  icon,
+  title,
+  body,
+}: {
+  tone: 'good' | 'warn' | 'bad';
+  icon: React.ReactNode;
+  title: string;
+  body: string;
+}) {
+  const styles = {
+    good: 'bg-emerald-50 text-emerald-800 ring-emerald-300',
+    warn: 'bg-amber-50 text-amber-900 ring-amber-300',
+    bad: 'bg-red-50 text-red-800 ring-red-300',
+  }[tone];
+
+  return (
+    <article className="rounded-lg border border-rule bg-panel p-4">
+      <div className="flex items-center gap-2">
+        <span className={`flex h-6 w-6 items-center justify-center rounded-md ring-1 ring-inset ${styles}`}>
+          {icon}
+        </span>
+        <h3 className="text-xs font-semibold text-ink">{title}</h3>
+      </div>
+      <p className="mt-2 text-2xs leading-relaxed text-ink-muted">{body}</p>
+    </article>
   );
 }
 
