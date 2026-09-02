@@ -9,6 +9,7 @@ import { FieldRow } from './FieldRow';
 import { ApprovalModal } from './ApprovalModal';
 import { StatusPill } from './ConfidenceChip';
 import { OmDraftPanel } from './OmDraftPanel';
+import { AskPanel } from './AskPanel';
 import { PipelineStepper, type Stage } from './PipelineStepper';
 import { ConfidenceMeter } from './ConfidenceMeter';
 import { SECTION_STYLES } from './sections';
@@ -39,6 +40,12 @@ export function ReviewScreen({ deal, salesforceMode }: { deal: Deal; salesforceM
 
   const [extraction, setExtraction] = useState<NetLeaseExtraction>(deal.extraction);
   const [activePath, setActivePath] = useState<string | null>(null);
+  /**
+   * A passage the assistant cited. The document pane has one focus, and this
+   * and a selected field compete for it — whichever the reviewer touched last
+   * wins, so the highlight always matches what they just clicked.
+   */
+  const [citedPassage, setCitedPassage] = useState<{ anchorId: string; quote: string } | null>(null);
   const [savingPath, setSavingPath] = useState<string | null>(null);
   const [editError, setEditError] = useState<string | null>(null);
 
@@ -67,6 +74,7 @@ export function ReviewScreen({ deal, salesforceMode }: { deal: Deal; salesforceM
   const selectField = useCallback(
     (path: string, options?: { scrollIntoView?: boolean }) => {
       setActivePath(path);
+      setCitedPassage(null);
       // Only counts when there is a citation to land on — that is the point.
       if (getField(extraction, path)?.sourceLocation) completeStep('check-citation');
 
@@ -265,11 +273,11 @@ export function ReviewScreen({ deal, salesforceMode }: { deal: Deal; salesforceM
         <div className="h-[28rem] lg:h-full lg:min-h-0">
           <DocumentPane
             paragraphs={deal.document.paragraphs}
-            activeAnchor={activeField?.sourceLocation ?? null}
-            activeQuote={activeField?.sourceQuote ?? null}
+            activeAnchor={citedPassage?.anchorId ?? activeField?.sourceLocation ?? null}
+            activeQuote={citedPassage?.quote ?? activeField?.sourceQuote ?? null}
             fileName={deal.document.fileName}
             pageCount={deal.document.pageCount}
-            hasSelection={Boolean(activePath)}
+            hasSelection={Boolean(activePath) || Boolean(citedPassage)}
           />
         </div>
 
@@ -280,6 +288,14 @@ export function ReviewScreen({ deal, salesforceMode }: { deal: Deal; salesforceM
               {readOnly ? 'Approved — locked' : 'Click a field to see its source · click a value to edit'}
             </span>
           </div>
+
+          <AskPanel
+            dealId={deal.id}
+            onCite={(anchorId, quote) => {
+              setCitedPassage({ anchorId, quote });
+              setActivePath(null);
+            }}
+          />
 
           {approved ? (
             <OmDraftPanel
