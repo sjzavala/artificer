@@ -77,7 +77,12 @@ function build(baseDate: string): Buyer[] {
     // of locking every "Thornbury" to the same contact.
     const head = ENTITY_HEADS[(i + Math.floor(i / ENTITY_HEADS.length)) % ENTITY_HEADS.length];
     const tail = ENTITY_TAILS[i % ENTITY_TAILS.length];
-    const first = CONTACT_FIRST[(i * 3) % CONTACT_FIRST.length];
+    // Both lists are twenty long, so any plain function of `i` repeats every
+    // twenty rows and buyers 1, 21 and 41 end up sharing a contact — the same
+    // person apparently representing three unrelated firms. Folding in the
+    // cycle count, as the entity heads do, keeps all sixty distinct.
+    const cycle = Math.floor(i / CONTACT_LAST.length);
+    const first = CONTACT_FIRST[(i * 3 + cycle * 7) % CONTACT_FIRST.length];
     const last = CONTACT_LAST[i % CONTACT_LAST.length];
 
     const capitalSource = CAPITAL_SOURCES_CYCLE[i % CAPITAL_SOURCES_CYCLE.length];

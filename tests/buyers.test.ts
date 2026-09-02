@@ -122,6 +122,15 @@ describe('the fixture', () => {
     }
   });
 
+  it('gives every buyer their own contact, entity and email', () => {
+    // The two name lists are both twenty long, so a plain function of the index
+    // repeats every twenty rows and one person appears to represent three
+    // unrelated firms — which is what the copilot's first real answer showed.
+    expect(new Set(rows.map((r) => r.contactName)).size).toBe(BUYER_COUNT);
+    expect(new Set(rows.map((r) => r.entityName)).size).toBe(BUYER_COUNT);
+    expect(new Set(rows.map((r) => r.email)).size).toBe(BUYER_COUNT);
+  });
+
   it('never produces an inverted cap rate band or an empty list', () => {
     for (const row of rows) {
       expect(row.targetCapRateMax).toBeGreaterThanOrEqual(row.targetCapRateMin);
