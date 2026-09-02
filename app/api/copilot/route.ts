@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { runCopilot, CopilotError } from '@/lib/copilot/agent';
+import { streamCopilot, CopilotError } from '@/lib/copilot/agent';
 import { MAX_HISTORY_TURNS, QUESTION_MAX_LENGTH, type CopilotTurn } from '@/lib/copilot/types';
 import { rateLimit } from '@/lib/rate-limit';
 import { SESSION_COOKIE } from '@/lib/session';
@@ -47,15 +47,46 @@ export async function POST(request: NextRequest) {
 
   const history = normalizeHistory(body.history);
 
-  try {
-    return NextResponse.json(await runCopilot(history, question));
-  } catch (error) {
-    if (error instanceof CopilotError) {
-      return NextResponse.json({ error: error.message }, { status: error.status });
-    }
-    console.error('[artificer] copilot failed', error);
-    return NextResponse.json({ error: 'Could not answer that question.' }, { status: 502 });
-  }
+  /**
+   * Newline-delimited JSON rather than server-sent events.
+   *
+   * One object per line, which a browser can read with a TextDecoder and a
+   * split — no event-type parsing, no reconnection semantics we would not use,
+   * and nothing between the two ends that has to agree on a wire format beyond
+   * "a line is a JSON object".
+   */
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      const send = (event: unknown) =>
+        controller.enqueue(encoder.encode(`${JSON.stringify(event)}\n`));
+
+      try {
+        for await (const event of streamCopilot(history, question)) {
+          send(event);
+        }
+      } catch (error) {
+        // The status code is long gone — a 200 went out with the first byte —
+        // so a failure has to arrive as an event the client can render.
+        const message =
+          error instanceof CopilotError ? error.message : 'Could not answer that question.';
+        if (!(error instanceof CopilotError)) console.error('[artificer] copilot failed', error);
+        send({ type: 'error', error: message });
+      } finally {
+        controller.close();
+      }
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'application/x-ndjson; charset=utf-8',
+      'Cache-Control': 'no-store, no-transform',
+      // Without this some proxies buffer the whole response and hand it over at
+      // the end, which is exactly the behaviour being fixed.
+      'X-Accel-Buffering': 'no',
+    },
+  });
 }
 
 /**

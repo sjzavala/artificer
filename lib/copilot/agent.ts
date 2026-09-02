@@ -1,7 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { DEFAULT_MODEL, describeApiError, getAnthropicClient } from '@/lib/extraction/client';
 import { runTool, TOOLS } from './tools';
-import type { CopilotReply, CopilotTurn, ToolRun } from './types';
+import type { CopilotEvent, CopilotReply, CopilotTurn, ToolRun } from './types';
 
 /**
  * The agent loop.
@@ -119,11 +119,18 @@ export class CopilotError extends Error {
   }
 }
 
-export async function runCopilot(
+/**
+ * The loop, as a stream of things that happened.
+ *
+ * A generator rather than two functions: `runCopilot` below drains it for any
+ * caller that just wants the finished reply, so the streaming and non-streaming
+ * paths cannot drift apart — there is only one loop, and it is this one.
+ */
+export async function* streamCopilot(
   history: CopilotTurn[],
   question: string,
   options: { client?: Anthropic; model?: string } = {},
-): Promise<CopilotReply> {
+): AsyncGenerator<CopilotEvent, void, undefined> {
   const client = options.client ?? getAnthropicClient();
   const model = options.model ?? DEFAULT_MODEL;
   const startedAt = Date.now();
@@ -154,7 +161,7 @@ export async function runCopilot(
     let response: Anthropic.Message;
     const turnStarted = Date.now();
     try {
-      response = await client.messages.create({
+      const stream = client.messages.stream({
         model,
         max_tokens: MAX_OUTPUT_TOKENS,
         // The tool list and the instructions are identical on every turn and on
@@ -164,6 +171,17 @@ export async function runCopilot(
         output_config: { effort: 'medium' },
         messages,
       });
+
+      // Forwarded as the model writes them. Tool-call arguments stream as
+      // input_json_delta and are deliberately not forwarded — half-built JSON
+      // is not something to put in front of anyone.
+      for await (const event of stream) {
+        if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+          yield { type: 'text', delta: event.delta.text };
+        }
+      }
+
+      response = await stream.finalMessage();
     } catch (error) {
       const described = describeApiError(error);
       throw new CopilotError(described ?? 'Could not reach the Anthropic API. Try again shortly.');
@@ -196,6 +214,10 @@ export async function runCopilot(
       break;
     }
 
+    // Whatever this turn wrote was a preamble to the lookups it is about to
+    // make, so it stops being the answer the moment they run.
+    if (text) yield { type: 'reset_text' };
+
     // Keep the model's own turn intact — the tool_use blocks have to come back
     // exactly as sent, or the tool results have nothing to attach to.
     messages.push({ role: 'assistant', content: response.content });
@@ -214,15 +236,19 @@ export async function runCopilot(
     toolMs += thisToolMs;
     timings.push(`tools(${calls.length})=${thisToolMs}ms`);
 
-    const results: Anthropic.ToolResultBlockParam[] = settled.map(({ call, run }) => {
+    const results: Anthropic.ToolResultBlockParam[] = [];
+    for (const { call, run } of settled) {
       toolRuns.push(run);
-      return {
+      // The card appears now. On a four-lookup answer this is the difference
+      // between something visibly working and a blank panel.
+      yield { type: 'tool', run };
+      results.push({
         type: 'tool_result',
         tool_use_id: call.id,
         content: JSON.stringify(run.result),
         ...(run.ok ? {} : { is_error: true }),
-      };
-    });
+      });
+    }
 
     messages.push({ role: 'user', content: results });
 
@@ -231,26 +257,66 @@ export async function runCopilot(
     if (text) answer = text;
   }
 
-  const reply: CopilotReply = {
-    answer:
-      answer ||
-      'I could not finish that one. Try asking it in smaller pieces — a single deal, or a single question about the pipeline.',
-    toolRuns,
-    model,
-    inputTokens,
-    outputTokens,
-    cacheReadTokens,
-    cacheCreationTokens,
-    durationMs: Date.now() - startedAt,
-    truncated,
-  };
+  const durationMs = Date.now() - startedAt;
 
   console.log(
     `[artificer] copilot model=${model} tools=${toolRuns.map((t) => t.name).join(',') || 'none'} ` +
       `in=${inputTokens} out=${outputTokens} cacheRead=${cacheReadTokens} ` +
-      `ms=${reply.durationMs} model=${modelMs}ms tools=${toolMs}ms truncated=${truncated} ` +
+      `ms=${durationMs} model=${modelMs}ms tools=${toolMs}ms truncated=${truncated} ` +
       `[${timings.join(' ')}]`,
   );
 
-  return reply;
+  // The text has already gone out delta by delta; this carries only what the
+  // end knows. A run that hit the ceiling with nothing to show gets a line
+  // saying so, because an empty answer is not an answer.
+  if (!answer && truncated) {
+    yield {
+      type: 'text',
+      delta:
+        'I could not finish that one. Try asking it in smaller pieces — a single deal, or a single question about the pipeline.',
+    };
+  }
+
+  yield { type: 'done', durationMs, truncated };
+}
+
+/**
+ * The whole reply, for callers that do not want a stream.
+ *
+ * It drains the generator rather than reimplementing the loop, which is the
+ * point: there is one agent loop in this file and both paths run it.
+ */
+export async function runCopilot(
+  history: CopilotTurn[],
+  question: string,
+  options: { client?: Anthropic; model?: string } = {},
+): Promise<CopilotReply> {
+  const toolRuns: ToolRun[] = [];
+  let answer = '';
+  let durationMs = 0;
+  let truncated = true;
+
+  for await (const event of streamCopilot(history, question, options)) {
+    if (event.type === 'tool') toolRuns.push(event.run);
+    else if (event.type === 'text') answer += event.delta;
+    else if (event.type === 'reset_text') answer = '';
+    else if (event.type === 'done') {
+      durationMs = event.durationMs;
+      truncated = event.truncated;
+    }
+  }
+
+  return {
+    answer: answer.trim(),
+    toolRuns,
+    model: options.model ?? DEFAULT_MODEL,
+    // Token accounting lives in the server log; a non-streaming caller that
+    // wanted it would need the generator to carry it, and nothing does.
+    inputTokens: 0,
+    outputTokens: 0,
+    cacheReadTokens: 0,
+    cacheCreationTokens: 0,
+    durationMs,
+    truncated,
+  };
 }
