@@ -4,13 +4,13 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { ChevronDown, Loader2, Phone, TriangleAlert, Users } from 'lucide-react';
 import { formatMoney } from '@/lib/format';
-import type { BuyerMatch, MatchResult } from '@/lib/copilot/match';
+import type { BuyerMatch, MatchResult } from '@/lib/factotum/match';
 
 /**
  * Who to call about this deal, on the deal itself.
  *
  * The matching existed for a while before this did, reachable only by opening
- * the copilot and asking for it. That put the brokerage's central question —
+ * the factotum and asking for it. That put the brokerage's central question —
  * who do I call — behind knowing that an assistant existed and how to phrase
  * something to it. A broker who has just finished reviewing a deal is exactly
  * the person who wants the answer, and this is exactly where they are.
