@@ -4,7 +4,12 @@ import { useEffect, useRef, useState } from 'react';
 import { CornerDownLeft, Loader2, RotateCcw, Sparkles, TriangleAlert } from 'lucide-react';
 import { CopilotToolRun } from './CopilotToolRun';
 import { Markdown } from './Markdown';
-import { QUESTION_MAX_LENGTH, type CopilotReply, type CopilotTurn, type ToolRun } from '@/lib/copilot/types';
+import {
+  QUESTION_MAX_LENGTH,
+  type CopilotEvent,
+  type CopilotTurn,
+  type ToolRun,
+} from '@/lib/copilot/types';
 
 /**
  * The copilot conversation.
@@ -14,9 +19,19 @@ import { QUESTION_MAX_LENGTH, type CopilotReply, type CopilotTurn, type ToolRun 
  * it client-side means no second copy of deal data sitting in a store.
  */
 
+/**
+ * One question and everything that has arrived for it so far.
+ *
+ * Built up from the stream rather than assigned once at the end: `toolRuns`
+ * grows as lookups land, `answer` grows as the model writes, and `durationMs`
+ * is only known when it is over.
+ */
 interface Exchange {
   question: string;
-  reply: CopilotReply | null;
+  toolRuns: ToolRun[];
+  answer: string;
+  durationMs: number | null;
+  truncated: boolean;
   error: string | null;
 }
 
@@ -42,17 +57,30 @@ export function Copilot() {
 
     setQuestion('');
     setBusy(true);
-    setExchanges((prev) => [...prev, { question: q, reply: null, error: null }]);
+    setExchanges((prev) => [
+      ...prev,
+      { question: q, toolRuns: [], answer: '', durationMs: null, truncated: false, error: null },
+    ]);
 
-    // Only settled exchanges are replayed: a turn that failed has no assistant
+    // Only answered exchanges are replayed: a turn that failed has no assistant
     // answer, and sending the question without one would leave two user turns
     // in a row describing a question that was never answered.
     const history: CopilotTurn[] = exchanges
-      .filter((e) => e.reply)
+      .filter((e) => e.answer && !e.error)
       .flatMap((e) => [
         { role: 'user' as const, content: e.question },
-        { role: 'assistant' as const, content: e.reply!.answer },
+        { role: 'assistant' as const, content: e.answer },
       ]);
+
+    /** Applies an update to the exchange this run is filling in — always the last. */
+    const patch = (fn: (e: Exchange) => void) =>
+      setExchanges((prev) => {
+        const next = [...prev];
+        const last = { ...next[next.length - 1] };
+        fn(last);
+        next[next.length - 1] = last;
+        return next;
+      });
 
     try {
       const response = await fetch('/api/copilot', {
@@ -60,23 +88,74 @@ export function Copilot() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ question: q, history }),
       });
-      const body = await response.json();
 
-      setExchanges((prev) => {
-        const next = [...prev];
-        const last = next[next.length - 1];
-        if (!response.ok) {
-          last.error = typeof body?.error === 'string' ? body.error : 'Could not answer that question.';
-        } else {
-          last.reply = body as CopilotReply;
+      // A failure before the stream opens still arrives as ordinary JSON.
+      if (!response.ok || !response.body) {
+        const body = await response.json().catch(() => null);
+        patch((e) => {
+          e.error = typeof body?.error === 'string' ? body.error : 'Could not answer that question.';
+        });
+        return;
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      // Newline-delimited JSON: a chunk can split a line anywhere, so whatever
+      // follows the last newline is held over until the rest of it arrives.
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() ?? '';
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
+
+          let event: CopilotEvent;
+          try {
+            event = JSON.parse(line) as CopilotEvent;
+          } catch {
+            continue; // A malformed line is not worth ending the answer over.
+          }
+
+          switch (event.type) {
+            case 'tool':
+              patch((e) => {
+                e.toolRuns = [...e.toolRuns, event.run];
+              });
+              break;
+            case 'text':
+              patch((e) => {
+                e.answer += event.delta;
+              });
+              break;
+            case 'reset_text':
+              // What was written was a preamble to the lookup that just ran.
+              patch((e) => {
+                e.answer = '';
+              });
+              break;
+            case 'done':
+              patch((e) => {
+                e.durationMs = event.durationMs;
+                e.truncated = event.truncated;
+              });
+              break;
+            case 'error':
+              patch((e) => {
+                e.error = event.error;
+              });
+              break;
+          }
         }
-        return next;
-      });
+      }
     } catch {
-      setExchanges((prev) => {
-        const next = [...prev];
-        next[next.length - 1].error = 'Could not reach the server.';
-        return next;
+      patch((e) => {
+        if (!e.answer) e.error = 'Could not reach the server.';
       });
     } finally {
       setBusy(false);
@@ -123,11 +202,14 @@ export function Copilot() {
                 </p>
               ) : null}
 
-              {exchange.reply ? (
+              {exchange.toolRuns.length > 0 || exchange.answer ? (
                 <div className="mt-2.5">
-                  {exchange.reply.toolRuns.length > 0 ? (
+                  {/* Each card appears the moment its lookup lands, so a
+                      four-lookup answer shows work happening rather than a
+                      blank panel until the end. */}
+                  {exchange.toolRuns.length > 0 ? (
                     <div className="mb-2.5 space-y-1">
-                      {exchange.reply.toolRuns.map((run: ToolRun, j: number) => (
+                      {exchange.toolRuns.map((run: ToolRun, j: number) => (
                         <CopilotToolRun key={j} run={run} />
                       ))}
                     </div>
@@ -137,12 +219,16 @@ export function Copilot() {
                       comparison table — and rendering it as preformatted text
                       put literal asterisks and pipe characters on screen. This
                       is the same small renderer the OM draft uses: it emits text
-                      nodes only, so nothing the model writes can inject markup. */}
-                  <div className="text-sm leading-relaxed text-ink">
-                    <Markdown source={exchange.reply.answer} />
-                  </div>
+                      nodes only, so nothing the model writes can inject markup.
+                      It re-renders on every delta, which is cheap at this size
+                      and keeps a half-written table from looking like debris. */}
+                  {exchange.answer ? (
+                    <div className="text-sm leading-relaxed text-ink">
+                      <Markdown source={exchange.answer} />
+                    </div>
+                  ) : null}
 
-                  {exchange.reply.truncated ? (
+                  {exchange.truncated ? (
                     <p className="mt-2 flex items-start gap-1.5 rounded-md bg-amber-50 px-2.5 py-1.5 text-2xs text-amber-900">
                       <TriangleAlert size={11} aria-hidden className="mt-px shrink-0" />
                       <span>
@@ -152,23 +238,30 @@ export function Copilot() {
                     </p>
                   ) : null}
 
-                  {/* Token counts are engineering telemetry and belong in the
-                      server log, not in front of someone deciding who to call.
-                      The elapsed time stays, because a reader who waited for it
-                      is entitled to see what they waited for. */}
-                  <p className="mt-2 text-2xs text-ink-faint">
-                    Answered in {(exchange.reply.durationMs / 1000).toFixed(1)}s
-                  </p>
+                  {/* Only once it is over. Token counts are engineering
+                      telemetry and belong in the server log, not in front of
+                      someone deciding who to call. */}
+                  {exchange.durationMs !== null ? (
+                    <p className="mt-2 text-2xs text-ink-faint">
+                      Answered in {(exchange.durationMs / 1000).toFixed(1)}s
+                    </p>
+                  ) : null}
                 </div>
               ) : null}
             </li>
           ))}
         </ol>
 
-        {busy ? (
+        {/* Shown until the answer starts arriving, not until the first tool
+            card does. Between the last lookup landing and the first word being
+            written there is a real pause — measured at five seconds on a
+            four-lookup question — and leaving the cards sitting there with no
+            indicator reads as finished-but-wrong. Once text is flowing it is
+            its own progress and the spinner goes. */}
+        {busy && !exchanges[exchanges.length - 1]?.answer ? (
           <p className="mt-4 flex items-center gap-2 text-xs text-ink-muted">
             <Loader2 size={13} aria-hidden className="animate-spin" />
-            Looking it up…
+            {exchanges[exchanges.length - 1]?.toolRuns.length ? 'Working it out…' : 'Looking it up…'}
           </p>
         ) : null}
 
