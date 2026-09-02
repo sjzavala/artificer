@@ -5,6 +5,7 @@ import { allFields } from '@/shared/schema';
 import { getBuyerRepo } from '@/lib/buyers/db';
 import { normalizeQuery } from '@/lib/buyers/queries';
 import { askDocument } from '@/lib/ask/client';
+import { searchListings, MarketDataError } from '@/lib/market/surmount';
 import { BUYER_STATUSES, CAPITAL_SOURCES } from '@/shared/buyer';
 import { GUARANTOR_TYPES, PROPERTY_TYPES } from '@/shared/schema';
 import { dealProfile, matchBuyers } from './match';
@@ -13,7 +14,7 @@ import type { ToolRun } from './types';
 /**
  * The copilot's tools.
  *
- * All six are reads. That is a structural guarantee rather than an instruction
+ * All seven are reads. That is a structural guarantee rather than an instruction
  * the model is asked to respect: there is no write tool here, so no amount of
  * persuasion in a question can make the assistant change a status or approve a
  * deal. Artificer's claim is that nothing reaches the CRM without a person
@@ -107,6 +108,25 @@ export const TOOLS: Anthropic.Tool[] = [
     },
   },
   {
+    name: 'search_market_listings',
+    description:
+      'Search live net-lease listings on the NNN Pro marketplace — the only view Artificer has of the world outside this workspace. Returns the tenant, location, asking price, net operating income, a cap rate derived from those two, building size, year built and lease terms. IMPORTANT: these are properties currently for sale at an asking price. They are not closed sales, so they show what sellers are asking today, not what anything traded for. Say so whenever you use them to reason about pricing.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        search: {
+          type: 'string',
+          description:
+            'Free text over tenant and location, as the marketplace search box takes it — "Dollar General", "Walgreens", "Ohio".',
+        },
+        state: { type: 'string', description: 'Two-letter USPS code to narrow to.' },
+        minCapRate: { type: 'number', description: 'Percent, e.g. 6.5.' },
+        maxCapRate: { type: 'number', description: 'Percent.' },
+        limit: { type: 'integer', description: 'How many to return, up to 50. Defaults to 12.' },
+      },
+    },
+  },
+  {
     name: 'match_buyers_to_deal',
     description:
       'Find the buyers who could take a specific deal. Compares the deal’s cap rate, state, asset class, guaranty and price against each buyer’s stated criteria, and returns both exact fits and near misses — buyers who failed exactly one test — with the reason for every decision. Prefer this over search_buyers whenever the question is about who to call regarding a particular deal.',
@@ -145,6 +165,8 @@ export async function runTool(name: string, input: Record<string, unknown>): Pro
         return await runDealFields(input);
       case 'read_audit':
         return await runReadAudit(input);
+      case 'search_market_listings':
+        return await runMarketListings(input);
       case 'search_buyers':
         return await runSearchBuyers(input);
       case 'match_buyers_to_deal':
@@ -289,6 +311,52 @@ async function runReadAudit(input: Record<string, unknown>): Promise<ToolRun> {
       })),
     },
   };
+}
+
+async function runMarketListings(input: Record<string, unknown>): Promise<ToolRun> {
+  try {
+    const found = await searchListings({
+      search: typeof input.search === 'string' ? input.search : undefined,
+      state: typeof input.state === 'string' ? input.state : undefined,
+      minCapRate: Number.isFinite(Number(input.minCapRate)) ? Number(input.minCapRate) : undefined,
+      maxCapRate: Number.isFinite(Number(input.maxCapRate)) ? Number(input.maxCapRate) : undefined,
+      limit: Number.isFinite(Number(input.limit)) ? Number(input.limit) : undefined,
+    });
+
+    const caps = found.listings.map((l) => l.capRate).filter((c): c is number => c !== null);
+
+    return {
+      name: 'search_market_listings',
+      input,
+      ok: true,
+      summary: `${found.listings.length} listing${found.listings.length === 1 ? '' : 's'}${
+        caps.length ? `, ${Math.min(...caps).toFixed(2)}–${Math.max(...caps).toFixed(2)}% asking` : ''
+      }`,
+      result: {
+        // Repeated in the payload as well as the tool description, because this
+        // is the one thing that must not be lost between the lookup and the
+        // sentence the broker reads.
+        note: 'Current asking prices on live listings — not closed sales.',
+        totalMatchedOnMarketplace: found.totalMatched,
+        examined: found.examined,
+        listings: found.listings,
+        capRateRange: caps.length
+          ? { low: Math.min(...caps), high: Math.max(...caps), median: median(caps) }
+          : null,
+      },
+    };
+  } catch (error) {
+    // The marketplace is the one dependency outside this system, so it is the
+    // one that degrades to "no market data" rather than taking the answer down.
+    const message = error instanceof MarketDataError ? error.message : 'Could not reach the marketplace.';
+    return fail('search_market_listings', input, `${message} Answer from what is in Artificer instead.`);
+  }
+}
+
+function median(values: number[]): number {
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[mid] : Math.round(((sorted[mid - 1] + sorted[mid]) / 2) * 100) / 100;
 }
 
 async function runSearchBuyers(input: Record<string, unknown>): Promise<ToolRun> {
