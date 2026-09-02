@@ -1,5 +1,11 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { normalizeState, resetMarketCache, searchListings, MarketDataError } from '@/lib/market/surmount';
+import {
+  normalizeState,
+  resetMarketCache,
+  searchListings,
+  stripRedundantPlace,
+  MarketDataError,
+} from '@/lib/market/surmount';
 
 /**
  * The marketplace is the one dependency outside Artificer, and it is an
@@ -57,6 +63,40 @@ describe('normalizeState', () => {
     expect(normalizeState(null)).toBeNull();
     expect(normalizeState('')).toBeNull();
     expect(normalizeState('Ontario')).toBeNull();
+  });
+});
+
+describe('stripRedundantPlace', () => {
+  /**
+   * The marketplace matches `search` as one phrase, so a state name inside it
+   * narrows the result set on top of the state filter — "Walgreens Florida"
+   * returns two listings where "Walgreens" filtered to FL returns three. A
+   * third of the matches, lost silently, in an answer that reads as complete.
+   */
+  it('drops a state name that is already the filter', () => {
+    expect(stripRedundantPlace('Walgreens Florida', 'FL')).toBe('Walgreens');
+    expect(stripRedundantPlace('Dollar General Texas', 'TX')).toBe('Dollar General');
+    expect(stripRedundantPlace('Dollar General TX', 'TX')).toBe('Dollar General');
+    expect(stripRedundantPlace('walgreens florida', 'Florida')).toBe('walgreens');
+  });
+
+  it('leaves a search alone when there is no state filter', () => {
+    expect(stripRedundantPlace('Walgreens Florida', null)).toBe('Walgreens Florida');
+  });
+
+  it('leaves an unrelated place alone', () => {
+    // Ohio is not the filter, so it is the user's own narrowing and stays.
+    expect(stripRedundantPlace('Walgreens Ohio', 'FL')).toBe('Walgreens Ohio');
+  });
+
+  it('does not strip a brand that merely contains the letters', () => {
+    expect(stripRedundantPlace('Texas Roadhouse', 'TX')).toBe('Roadhouse');
+    expect(stripRedundantPlace('Ohio Valley Bank', 'OH')).toBe('Valley Bank');
+  });
+
+  it('never strips the query away entirely', () => {
+    // "Texas" with state=TX is redundant, but it is still what was asked.
+    expect(stripRedundantPlace('Texas', 'TX')).toBe('Texas');
   });
 });
 

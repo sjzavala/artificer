@@ -117,9 +117,13 @@ export const TOOLS: Anthropic.Tool[] = [
         search: {
           type: 'string',
           description:
-            'Free text over tenant and location, as the marketplace search box takes it — "Dollar General", "Walgreens", "Ohio".',
+            'The tenant or brand ONLY — "Dollar General", "Walgreens", "7-Eleven". Do not put a state, city or region in here: the marketplace matches this as one phrase, so "Walgreens Florida" finds fewer listings than "Walgreens" narrowed with the state filter, and quietly misses some. Use `state` for geography.',
         },
-        state: { type: 'string', description: 'Two-letter USPS code to narrow to.' },
+        state: {
+          type: 'string',
+          description:
+            'Two-letter USPS code — the only way to narrow by geography. Use this rather than putting the place name in `search`.',
+        },
         minCapRate: { type: 'number', description: 'Percent, e.g. 6.5.' },
         maxCapRate: { type: 'number', description: 'Percent.' },
         limit: { type: 'integer', description: 'How many to return, up to 50. Defaults to 12.' },
