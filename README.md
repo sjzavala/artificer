@@ -348,6 +348,31 @@ gate itself. Attempts are rate-limited to 8 per minute per IP.
 permissions. It is a demonstration lock so that a public URL cannot burn API
 tokens or expose demo deal data. Do not put real deal data behind it.
 
+### What has to change before this holds anything real
+
+Per-user authentication is the prerequisite, and it is a larger job than it
+looks, because three things depend on the gate being the only boundary:
+
+- **The audit log records a name the browser supplied.** `requireReviewerName()`
+  reads it from `localStorage`, so "who approved this" is currently a claim
+  rather than a fact. Real accounts turn the audit trail from a demonstration
+  into evidence, which is most of its point.
+- **Everyone through the gate sees everything** — every deal, every buyer's
+  equity and contact details, the whole audit log. Commercially, a buyer's
+  capital position is exactly the sort of thing that should not be visible
+  firm-wide by default.
+- **The copilot lowers the cost of reading all of it.** It does not widen the
+  boundary — it reaches nothing a signed-in visitor could not already open — but
+  browsing sixty buyers and a document used to take effort and now takes one
+  sentence. A shared code that leaks was always bad; it is worse when the leak
+  comes with an assistant.
+
+The shape of the fix is ordinary: real accounts, a role on each one, the reviewer
+name taken from the session instead of the browser, and the buyer and deal
+queries scoped to what that user is allowed to see. None of it is exotic. It is
+simply not built, and the honest position is that this is a demonstration until
+it is.
+
 ### Rotating the access code
 
 ```bash
