@@ -31,6 +31,22 @@ export function Walkthrough({ sampleDealHref }: { sampleDealHref: string | null 
   const overFooter = Boolean(pathname?.startsWith('/deals/'));
   const bottom = overFooter ? 'bottom-[8.5rem] sm:bottom-[5.75rem]' : 'bottom-4';
 
+  /**
+   * Every step of this walkthrough happens in the deal-intake flow — open the
+   * deal, check a citation, resolve a flag, approve, see the record, draft the
+   * summary. On the buyer pipeline or the copilot it was telling people to
+   * "click any field on the right" of a screen that has no fields, which reads
+   * as broken rather than as guidance meant for somewhere else.
+   *
+   * The other tabs are not part of a tour and do not need one; they are lists
+   * with controls on them. So the panel stays where its instructions are true.
+   */
+  const onWalkthroughRoute =
+    pathname === '/' ||
+    Boolean(pathname?.startsWith('/deals/')) ||
+    Boolean(pathname?.startsWith('/records/')) ||
+    pathname === '/how-it-works';
+
   const [narrow, setNarrow] = useState(false);
 
   useEffect(() => {
@@ -51,6 +67,7 @@ export function Walkthrough({ sampleDealHref }: { sampleDealHref: string | null 
   // Nothing renders server-side: progress lives in localStorage, and a flash of
   // the wrong state is worse than a frame of nothing.
   if (!state) return null;
+  if (!onWalkthroughRoute) return null;
 
   // On a phone an expanded panel covers the very document it is pointing at, so
   // it starts collapsed there — unless the visitor has said otherwise.
