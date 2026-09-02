@@ -118,6 +118,7 @@ export const AUDIT_ACTIONS = [
   'deal_approved',
   'deal_rejected',
   'om_draft_generated',
+  'buyer_status_changed',
 ] as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
@@ -126,6 +127,11 @@ export interface AuditEntry {
   id: string;
   /** ISO-8601 timestamp. Entries are appended, never mutated or removed. */
   at: string;
+  /**
+   * The deal this concerns, or null for an entry that is not about one — a
+   * buyer's pipeline status, for instance. The audit log is the app's record of
+   * who did what, so it has to admit subjects other than deals.
+   */
   dealId: string | null;
   /** The reviewer name set once in the UI. The access gate is the only auth. */
   actor: string;

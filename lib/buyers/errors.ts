@@ -9,17 +9,17 @@ import { NextResponse } from 'next/server';
  */
 export function repositoryFailure(error: unknown): NextResponse {
   const message = error instanceof Error ? error.message : String(error);
-  console.error(`[artificer] borrower search failed: ${message}`);
+  console.error(`[artificer] buyer pipeline failed: ${message}`);
 
-  if (/relation "borrowers" does not exist/i.test(message)) {
+  if (/relation "buyers" does not exist/i.test(message)) {
     return NextResponse.json(
-      { error: 'The borrower table has not been created yet. Run `npm run seed-borrowers`.' },
+      { error: 'The buyer table has not been created yet. Run `npm run seed-buyers`.' },
       { status: 503 },
     );
   }
 
   return NextResponse.json(
-    { error: 'Could not reach the borrower database. Check DATABASE_URL on the server.' },
+    { error: 'Could not reach the buyer database. Check DATABASE_URL on the server.' },
     { status: 503 },
   );
 }
