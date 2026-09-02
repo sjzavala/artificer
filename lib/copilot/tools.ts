@@ -1,5 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { getDeal, listDealSummaries } from '@/lib/deals';
+import { readAudit } from '@/lib/audit';
+import { allFields } from '@/shared/schema';
 import { getBuyerRepo } from '@/lib/buyers/db';
 import { normalizeQuery } from '@/lib/buyers/queries';
 import { askDocument } from '@/lib/ask/client';
@@ -11,7 +13,7 @@ import type { ToolRun } from './types';
 /**
  * The copilot's tools.
  *
- * All four are reads. That is a structural guarantee rather than an instruction
+ * All six are reads. That is a structural guarantee rather than an instruction
  * the model is asked to respect: there is no write tool here, so no amount of
  * persuasion in a question can make the assistant change a status or approve a
  * deal. Artificer's claim is that nothing reaches the CRM without a person
@@ -76,6 +78,35 @@ export const TOOLS: Anthropic.Tool[] = [
     },
   },
   {
+    name: 'get_deal_fields',
+    description:
+      'Every field Artificer extracted from a deal — lease type, commencement and expiration, remaining term, renewal options, rent escalations, landlord responsibilities, building and lot size, NOI, rent, price per square foot, guarantor and credit rating, and the full address. Each carries a confidence grade, whether a person edited or confirmed it, and the passage it came from. Prefer this over ask_deal_document for anything the extraction already covers: it is faster, it is already reviewed, and it tells you how well supported each value is.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        dealId: { type: 'string', description: 'The deal to read.' },
+        section: {
+          type: 'string',
+          enum: ['property', 'tenant', 'lease', 'economics'],
+          description: 'Only this group of fields. Omit for all of them.',
+        },
+      },
+      required: ['dealId'],
+    },
+  },
+  {
+    name: 'read_audit',
+    description:
+      'The append-only record of what has been done: uploads, extractions, field edits and confirmations, approvals, rejections, OM drafts and buyer status changes — each with who did it and when. Use it for questions about history, provenance or who decided something.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        dealId: { type: 'string', description: 'Only entries for this deal. Omit for everything.' },
+        limit: { type: 'integer', description: 'Most recent first. Defaults to 25.' },
+      },
+    },
+  },
+  {
     name: 'match_buyers_to_deal',
     description:
       'Find the buyers who could take a specific deal. Compares the deal’s cap rate, state, asset class, guaranty and price against each buyer’s stated criteria, and returns both exact fits and near misses — buyers who failed exactly one test — with the reason for every decision. Prefer this over search_buyers whenever the question is about who to call regarding a particular deal.',
@@ -110,6 +141,10 @@ export async function runTool(name: string, input: Record<string, unknown>): Pro
         return await runListDeals(input);
       case 'ask_deal_document':
         return await runAskDocument(input);
+      case 'get_deal_fields':
+        return await runDealFields(input);
+      case 'read_audit':
+        return await runReadAudit(input);
       case 'search_buyers':
         return await runSearchBuyers(input);
       case 'match_buyers_to_deal':
@@ -186,6 +221,71 @@ async function runAskDocument(input: Record<string, unknown>): Promise<ToolRun> 
         marker: c.marker,
         quote: c.quote,
         location: c.sourceLocation,
+      })),
+    },
+  };
+}
+
+async function runDealFields(input: Record<string, unknown>): Promise<ToolRun> {
+  const dealId = String(input.dealId ?? '');
+  const deal = await getDeal(dealId);
+  if (!deal) return fail('get_deal_fields', input, `No deal with id ${dealId}.`);
+
+  const section = typeof input.section === 'string' ? input.section : null;
+  const fields = allFields(deal.extraction)
+    .filter(({ spec }) => !section || spec.section === section)
+    .map(({ spec, field }) => ({
+      label: spec.label,
+      path: spec.path,
+      value: field.value,
+      unit: spec.unit ?? null,
+      // The grade travels with the value on purpose: "6.75%, high confidence,
+      // stated directly" and "6.75%, low, one reading of a contradiction" are
+      // different claims, and an assistant that flattens them is lying by
+      // omission.
+      confidence: field.confidence,
+      editedByAPerson: Boolean(field.edited),
+      confirmedByAPerson: Boolean(field.confirmed),
+      sourceQuote: field.sourceQuote,
+      sourceLocation: field.sourceLocation,
+    }));
+
+  const flagged = fields.filter((f) => f.confidence === 'low' || f.confidence === 'not_found');
+
+  return {
+    name: 'get_deal_fields',
+    input,
+    ok: true,
+    summary: `${fields.length} field${fields.length === 1 ? '' : 's'}${flagged.length ? `, ${flagged.length} needing attention` : ''}`,
+    result: {
+      dealId,
+      status: deal.status,
+      fileName: deal.document.fileName,
+      fields,
+      needingAttention: flagged.map((f) => f.label),
+    },
+  };
+}
+
+async function runReadAudit(input: Record<string, unknown>): Promise<ToolRun> {
+  const dealId = typeof input.dealId === 'string' && input.dealId ? input.dealId : undefined;
+  const limit = Math.min(Math.max(Number(input.limit) || 25, 1), 100);
+
+  const entries = (await readAudit(dealId)).slice(0, limit);
+
+  return {
+    name: 'read_audit',
+    input,
+    ok: true,
+    summary: `${entries.length} entr${entries.length === 1 ? 'y' : 'ies'}${dealId ? ` for ${dealId}` : ''}`,
+    result: {
+      count: entries.length,
+      entries: entries.map((e) => ({
+        at: e.at,
+        actor: e.actor,
+        action: e.action,
+        summary: e.summary,
+        dealId: e.dealId,
       })),
     },
   };
