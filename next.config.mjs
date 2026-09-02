@@ -4,6 +4,13 @@ const nextConfig = {
   // large worker-aware build and jsforce is CommonJS that loads at runtime.
   serverExternalPackages: ['pdfjs-dist', 'jsforce'],
 
+  // The guide moved to the root and the deal list moved off it. Both paths were
+  // linked from the README and from anything anyone bookmarked, so they keep
+  // working rather than 404ing at whoever followed an old link.
+  async redirects() {
+    return [{ source: '/how-it-works', destination: '/', permanent: false }];
+  },
+
   // pdf.js loads its worker with a runtime dynamic import, which the build's
   // static file tracing cannot see. Without this the deployed function throws
   // "Setting up fake worker failed" on every upload, because the worker module

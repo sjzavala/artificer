@@ -10,7 +10,7 @@ export default function FactotumPage() {
     <AppShell active="factotum" salesforceMode={salesforceMode()}>
       {/* A fixed-height column so the transcript scrolls and the composer stays
           put, rather than the whole page growing with the conversation. */}
-      <main className="mx-auto flex h-[calc(100vh-3.5rem)] w-full max-w-4xl flex-col px-5 py-8 sm:h-[calc(100vh-4rem)] sm:px-8">
+      <main className="mx-auto flex h-[calc(100vh-6.5rem)] w-full max-w-4xl flex-col px-5 py-8 sm:px-8 lg:h-screen">
         <header className="mb-5 shrink-0">
           <span className="eyebrow">Assistant</span>
           <h1 className="display mt-2 text-[2rem] font-semibold leading-tight tracking-tightest text-ink">

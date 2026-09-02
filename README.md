@@ -460,15 +460,22 @@ test that fails if they ever drift apart.
 ```
 app/                    Next.js App Router — pages and API routes
   gate/                 access code page
-  how-it-works/         the guide: pipeline, steps, grades, principles
-  page.tsx              deals list + upload
+  page.tsx              the guide, and where you land: what each tool is for
+  icon.svg              the dividers mark, served as the app icon
+  deals/                deals list + upload
   deals/[id]/           the approval screen
+  buyers/               the buyer pipeline
+  factotum/             the assistant
   records/[id]/         mock CRM record view
   audit/                audit timeline
-  api/                  extract · gate · field · approve · reject · om-draft
+  api/                  extract · gate · field · approve · ask · buyers · factotum
 components/             hand-styled React, no UI library
 lib/
   extraction/           pdf → paragraphs → model → validated schema → anchors
+  ask/                  question → answer with verified passages
+  buyers/               the pipeline: queries, repositories, seed
+  factotum/             tool loop, deal↔buyer matching
+  market/               live listings from the NNN Pro marketplace
   salesforce/           adapter interface, mock + real, field mapping
   store/                storage interface, local + blob
   audit.ts              append-only log

@@ -193,11 +193,11 @@ export function ReviewScreen({ deal, salesforceMode }: { deal: Deal; salesforceM
      * screen, so a reviewer never loses the document while reading the data.
      * Below `lg` it collapses to ordinary page flow with stacked panes.
      */
-    <div className="flex flex-col lg:h-[calc(100vh-4rem)] lg:overflow-hidden">
+    <div className="flex flex-col lg:h-screen lg:overflow-hidden">
       <div className="mx-auto w-full max-w-[100rem] shrink-0 px-5 pt-6 sm:px-8">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
           <Link
-            href="/"
+            href="/deals"
             className="focus-ring inline-flex items-center gap-1.5 rounded text-xs text-ink-muted transition-colors hover:text-ink"
           >
             <ArrowLeft size={13} /> Deals
