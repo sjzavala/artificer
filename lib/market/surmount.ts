@@ -90,12 +90,42 @@ function baseUrl(): string {
   return process.env.SURMOUNT_API_URL || DEFAULT_BASE_URL;
 }
 
+/**
+ * Removes a place name from the search text when it is already the state filter.
+ *
+ * The marketplace matches `search` as one phrase, so "Walgreens Florida" returns
+ * two listings where "Walgreens" narrowed to FL returns three — a third of the
+ * matches lost, silently, in a way that reads as a complete answer. The tool
+ * description tells the model not to do this; this makes it not matter if it
+ * does anyway. A prompt should not be the only thing between a broker and a
+ * missing comp.
+ */
+export function stripRedundantPlace(search: string, state: string | null): string {
+  if (!search || !state) return search;
+
+  const code = normalizeState(state);
+  if (!code) return search;
+
+  const names = [code, ...Object.entries(STATE_CODES).filter(([, c]) => c === code).map(([n]) => n)];
+
+  let cleaned = search;
+  for (const name of names) {
+    cleaned = cleaned.replace(new RegExp(`\\b${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi'), ' ');
+  }
+
+  const trimmed = cleaned.replace(/\s{2,}/g, ' ').trim();
+  // Never strip the whole query away — "Texas" alone with state=TX is still a
+  // search someone meant, even if it is a redundant one.
+  return trimmed || search;
+}
+
 export async function searchListings(
   params: ListingSearch = {},
   fetchImpl: typeof fetch = fetch,
 ): Promise<ListingResult> {
   const limit = Math.min(Math.max(params.limit ?? 12, 1), MAX_PAGE_SIZE);
-  const key = JSON.stringify({ ...params, limit });
+  const search = stripRedundantPlace(params.search?.trim() ?? '', params.state ?? null);
+  const key = JSON.stringify({ ...params, search, limit });
 
   const hit = cache.get(key);
   if (hit && Date.now() - hit.at < CACHE_TTL_MS) return hit.value;
@@ -107,7 +137,7 @@ export async function searchListings(
   url.searchParams.set('pageSize', String(needsLocalFilter(params) ? MAX_PAGE_SIZE : limit));
   url.searchParams.set('sortBy', 'createdAt');
   url.searchParams.set('sortOrder', 'desc');
-  if (params.search?.trim()) url.searchParams.set('search', params.search.trim());
+  if (search) url.searchParams.set('search', search);
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
