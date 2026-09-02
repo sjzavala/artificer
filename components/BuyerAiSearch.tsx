@@ -2,24 +2,24 @@
 
 import { useState } from 'react';
 import { CornerDownLeft, Loader2, Sparkles, X } from 'lucide-react';
-import { AI_QUERY_MAX_LENGTH } from '@/lib/borrower-search/types';
-import type { BorrowerFilters } from './BorrowerSearchBar';
+import { AI_QUERY_MAX_LENGTH } from '@/lib/buyers/types';
+import type { BuyerFilterState } from './BuyerFilters';
 
 /**
  * Ask in words; get filters.
  *
  * The result of a translation is the controls below moving, not a separate list
- * of names. That is the whole design: the reviewer sees which filters the model
- * chose, and can correct one without starting over.
+ * of names. That is the whole design: the broker sees which filters the model
+ * chose and can correct one without starting over.
  */
 
 const EXAMPLES = [
-  'pending applications scoring 700 or better',
-  'borrowers named Smith',
-  'the biggest loans in Texas',
+  'exchange buyers who need to identify within two weeks',
+  'active buyers with at least $2M for retail in Texas',
+  'institutional buyers who will only take corporate guaranties',
 ];
 
-export function AiSearchInput({ onFilters }: { onFilters: (filters: BorrowerFilters) => void }) {
+export function BuyerAiSearch({ onFilters }: { onFilters: (filters: BuyerFilterState) => void }) {
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -33,7 +33,7 @@ export function AiSearchInput({ onFilters }: { onFilters: (filters: BorrowerFilt
     setError(null);
 
     try {
-      const response = await fetch('/api/borrower-search/ai-query', {
+      const response = await fetch('/api/buyers/ai-query', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query }),
@@ -47,7 +47,7 @@ export function AiSearchInput({ onFilters }: { onFilters: (filters: BorrowerFilt
       }
 
       setInterpretation(typeof body.interpretation === 'string' ? body.interpretation : null);
-      onFilters(body.filters as BorrowerFilters);
+      onFilters(body.filters as BuyerFilterState);
     } catch {
       setError('Could not reach the server.');
       setInterpretation(null);
@@ -64,19 +64,19 @@ export function AiSearchInput({ onFilters }: { onFilters: (filters: BorrowerFilt
           void submit(text);
         }}
       >
-        <label htmlFor="ai-query" className="eyebrow mb-1.5 flex items-center gap-1.5">
+        <label htmlFor="buyer-ai-query" className="eyebrow mb-1.5 flex items-center gap-1.5">
           <Sparkles size={12} aria-hidden className="text-accent" />
           Ask in plain English
         </label>
 
         <div className="flex gap-2">
           <input
-            id="ai-query"
+            id="buyer-ai-query"
             type="text"
             value={text}
             maxLength={AI_QUERY_MAX_LENGTH}
             disabled={busy}
-            placeholder="e.g. pending applications in California scoring at least 700"
+            placeholder="e.g. 1031 buyers with $2M+ for retail in the Southeast running out of time"
             onChange={(e) => setText(e.target.value)}
             className="focus-ring min-w-0 flex-1 rounded-md border border-rule bg-white px-3 py-2 text-sm text-ink placeholder:text-ink-faint disabled:bg-sunken"
           />
@@ -85,11 +85,7 @@ export function AiSearchInput({ onFilters }: { onFilters: (filters: BorrowerFilt
             disabled={busy || !text.trim()}
             className="focus-ring inline-flex shrink-0 items-center gap-1.5 rounded-md bg-accent px-3.5 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-40"
           >
-            {busy ? (
-              <Loader2 size={14} aria-hidden className="animate-spin" />
-            ) : (
-              <CornerDownLeft size={14} aria-hidden />
-            )}
+            {busy ? <Loader2 size={14} aria-hidden className="animate-spin" /> : <CornerDownLeft size={14} aria-hidden />}
             {busy ? 'Reading…' : 'Search'}
           </button>
         </div>

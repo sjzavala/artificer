@@ -6,6 +6,7 @@ import {
   PencilLine,
   ScrollText,
   Sparkles,
+  UserRoundCog,
   TriangleAlert,
   XCircle,
 } from 'lucide-react';
@@ -21,6 +22,7 @@ const ICONS: Record<AuditAction, { icon: typeof FileUp; className: string }> = {
   deal_approved: { icon: CheckCircle2, className: 'text-accent' },
   deal_rejected: { icon: XCircle, className: 'text-red-600' },
   om_draft_generated: { icon: ScrollText, className: 'text-ink-muted' },
+  buyer_status_changed: { icon: UserRoundCog, className: 'text-property' },
 };
 
 export function AuditTimeline({ entries }: { entries: AuditEntry[] }) {

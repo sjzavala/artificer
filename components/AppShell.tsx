@@ -15,7 +15,7 @@ export function AppShell({
   sampleDealHref = null,
 }: {
   children: React.ReactNode;
-  active: 'guide' | 'deals' | 'borrowers' | 'audit' | null;
+  active: 'guide' | 'deals' | 'buyers' | 'audit' | null;
   salesforceMode: string;
   /** Lets the walkthrough's first step link straight to the seeded deal. */
   sampleDealHref?: string | null;
@@ -36,7 +36,7 @@ export function AppShell({
             <nav className="hidden items-center gap-1 text-sm sm:flex">
               <NavLink href="/how-it-works" label="How it works" active={active === 'guide'} />
               <NavLink href="/" label="Deals" active={active === 'deals'} />
-              <NavLink href="/borrower-search" label="Borrowers" active={active === 'borrowers'} />
+              <NavLink href="/buyers" label="Buyers" active={active === 'buyers'} />
               <NavLink href="/audit" label="Audit" active={active === 'audit'} />
             </nav>
 
@@ -62,7 +62,7 @@ export function AppShell({
           <nav className="-mx-5 flex items-center gap-1 overflow-x-auto px-5 pb-1.5 text-sm sm:hidden">
             <NavLink href="/how-it-works" label="How it works" active={active === 'guide'} compact />
             <NavLink href="/" label="Deals" active={active === 'deals'} compact />
-            <NavLink href="/borrower-search" label="Borrowers" active={active === 'borrowers'} compact />
+            <NavLink href="/buyers" label="Buyers" active={active === 'buyers'} compact />
             <NavLink href="/audit" label="Audit" active={active === 'audit'} compact />
           </nav>
         </div>

@@ -2,21 +2,33 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, Loader2, Users } from 'lucide-react';
-import { AiSearchInput } from './AiSearchInput';
-import { BorrowerSearchBar, type BorrowerFilters } from './BorrowerSearchBar';
-import { BorrowerTable } from './BorrowerTable';
-import { DEFAULT_LIMIT, type BorrowerSearchResult, type BorrowerStatus } from '@/lib/borrower-search/types';
+import { BuyerAiSearch } from './BuyerAiSearch';
+import { BuyerFilters, type BuyerFilterState } from './BuyerFilters';
+import { BuyerTable } from './BuyerTable';
+import { requireReviewerName } from '@/lib/reviewer';
+import { DEFAULT_LIMIT, type BuyerSearchResult } from '@/lib/buyers/types';
+import type { BuyerStatus } from '@/shared/buyer';
 
-const EMPTY_FILTERS: BorrowerFilters = { q: '', status: '', state: '', minScore: '', sortBy: 'id' };
+const EMPTY_FILTERS: BuyerFilterState = {
+  q: '',
+  status: '',
+  capitalSource: '',
+  market: '',
+  propertyType: '',
+  minGuarantor: '',
+  minEquity: '',
+  identifyWithinDays: '',
+  sortBy: 'id',
+};
 
 /** Long enough to swallow a burst of typing, short enough not to feel laggy. */
 const DEBOUNCE_MS = 200;
 
-export function BorrowerSearchPage() {
-  const [filters, setFilters] = useState<BorrowerFilters>(EMPTY_FILTERS);
+export function BuyerPipeline() {
+  const [filters, setFilters] = useState<BuyerFilterState>(EMPTY_FILTERS);
   const [page, setPage] = useState(1);
 
-  const [data, setData] = useState<BorrowerSearchResult | null>(null);
+  const [data, setData] = useState<BuyerSearchResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pendingId, setPendingId] = useState<number | null>(null);
@@ -25,16 +37,14 @@ export function BorrowerSearchPage() {
   const [dataVersion, setDataVersion] = useState(0);
 
   /**
-   * BUG-9. The sandbox fired a request per keystroke with no abort and no
-   * ordering guard, against an API whose broader queries were deliberately
-   * slower — so the response for "s" could land after the response for "smith"
-   * and overwrite it. The box said "smith"; the table showed results for "s".
+   * Only the newest request may write to state.
    *
-   * Three things prevent it here, and the redundancy is deliberate because the
+   * Three things enforce it, and the redundancy is deliberate because the
    * failure is intermittent and reads as "cannot reproduce": the input is
    * debounced, each request aborts the one before it, and a monotonic sequence
-   * number means a response that arrives late is discarded even if its abort
-   * did not take. Only the newest request may write to state.
+   * number discards a late response even if its abort did not take. Without
+   * this, typing a name can leave the box showing one query and the table
+   * showing results for a shorter one.
    */
   const latestRequest = useRef(0);
 
@@ -50,14 +60,18 @@ export function BorrowerSearchPage() {
     });
     if (filters.q.trim()) params.set('q', filters.q.trim());
     if (filters.status) params.set('status', filters.status);
-    if (filters.state) params.set('state', filters.state);
-    if (filters.minScore) params.set('minScore', filters.minScore);
+    if (filters.capitalSource) params.set('capitalSource', filters.capitalSource);
+    if (filters.market) params.set('market', filters.market);
+    if (filters.propertyType) params.set('propertyType', filters.propertyType);
+    if (filters.minGuarantor) params.set('minGuarantor', filters.minGuarantor);
+    if (filters.minEquity) params.set('minEquity', filters.minEquity);
+    if (filters.identifyWithinDays) params.set('identifyWithinDays', filters.identifyWithinDays);
 
     setLoading(true);
 
     const timer = setTimeout(async () => {
       try {
-        const response = await fetch(`/api/borrower-search?${params}`, { signal: controller.signal });
+        const response = await fetch(`/api/buyers?${params}`, { signal: controller.signal });
         const body = await response.json();
 
         if (requestId !== latestRequest.current) return;
@@ -66,7 +80,7 @@ export function BorrowerSearchPage() {
           setError(typeof body?.error === 'string' ? body.error : `Request failed (${response.status}).`);
           setData(null);
         } else {
-          setData(body as BorrowerSearchResult);
+          setData(body as BuyerSearchResult);
           setError(null);
         }
       } catch (err) {
@@ -86,25 +100,35 @@ export function BorrowerSearchPage() {
   }, [filters, page, dataVersion]);
 
   /**
-   * BUG-10. Changing any filter returns to page 1. The sandbox reset the page in
-   * each control's handler and the search input was the one that forgot, so
-   * searching from page 3 landed you on page 3 of a shorter result set — empty,
-   * with nothing on screen to explain why. Routing every filter change through
-   * here makes the reset structural rather than something each new control has
-   * to remember.
+   * Changing any filter returns to page 1. Routing every change through here
+   * makes that structural rather than something each new control has to
+   * remember — the omission that stranded people on an empty page 3.
    */
-  const updateFilters = useCallback((next: Partial<BorrowerFilters>) => {
+  const updateFilters = useCallback((next: Partial<BuyerFilterState>) => {
     setFilters((current) => ({ ...current, ...next }));
     setPage(1);
   }, []);
 
-  async function changeStatus(id: number, status: BorrowerStatus) {
+  /**
+   * A translated question replaces the filters outright rather than merging.
+   * Merging would leave a filter from a previous question silently narrowing
+   * the new one, and the controls would no longer show the whole truth about
+   * what is being searched.
+   */
+  const applyAiFilters = useCallback((next: BuyerFilterState) => {
+    setFilters({ ...EMPTY_FILTERS, ...next });
+    setPage(1);
+  }, []);
+
+  async function changeStatus(id: number, status: BuyerStatus) {
     setPendingId(id);
     try {
-      const response = await fetch(`/api/borrower-search/${id}/status`, {
+      const response = await fetch(`/api/buyers/${id}/status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status }),
+        // The audit entry needs a name against it, and this is the same
+        // browser-local reviewer the deal workflow records.
+        body: JSON.stringify({ status, actor: requireReviewerName() }),
       });
       if (!response.ok) {
         const body = await response.json().catch(() => null);
@@ -124,35 +148,26 @@ export function BorrowerSearchPage() {
   const results = data?.results ?? [];
   const total = data?.total ?? 0;
   const totalPages = data?.totalPages ?? 1;
-  const isFiltered = Boolean(filters.q || filters.status || filters.state || filters.minScore);
-
-  /**
-   * A translated question replaces the filters outright rather than merging
-   * into them. Merging would leave a filter from a previous question silently
-   * narrowing the new one, and the controls would no longer show the whole
-   * truth about what is being searched.
-   */
-  const applyAiFilters = useCallback((next: BorrowerFilters) => {
-    setFilters({ ...EMPTY_FILTERS, ...next });
-    setPage(1);
-  }, []);
+  const isFiltered = Object.entries(filters).some(
+    ([key, value]) => key !== 'sortBy' && value !== '',
+  );
 
   return (
     <div>
-      <AiSearchInput onFilters={applyAiFilters} />
+      <BuyerAiSearch onFilters={applyAiFilters} />
 
       <div className="mt-5">
-        <BorrowerSearchBar filters={filters} onChange={updateFilters} />
+        <BuyerFilters filters={filters} onChange={updateFilters} />
       </div>
 
       <div className="mt-6 flex items-center justify-between gap-4 border-b border-rule pb-2.5">
         <p className="flex items-center gap-2 text-sm text-ink-muted" aria-live="polite">
           <Users size={14} aria-hidden className="text-ink-faint" />
-          {/* The count reflects the filters — BUG-4 — so it can be trusted as
-              the size of the result set rather than of the table. */}
+          {/* The count reflects the filters, so it can be trusted as the size of
+              the result set rather than of the pipeline. */}
           <span>
-            <strong className="font-medium text-ink">{total}</strong> borrower{total === 1 ? '' : 's'}
-            {isFiltered ? ' match these filters' : ''}
+            <strong className="font-medium text-ink">{total}</strong> buyer{total === 1 ? '' : 's'}
+            {isFiltered ? ' match these filters' : ' in the pipeline'}
           </span>
           {loading ? <Loader2 size={13} aria-hidden className="animate-spin text-ink-faint" /> : null}
           <span className="sr-only">{loading ? 'Loading results' : 'Results updated'}</span>
@@ -180,18 +195,16 @@ export function BorrowerSearchPage() {
 
       {!error && results.length > 0 ? (
         <div className="mt-5">
-          <BorrowerTable borrowers={results} onStatusChange={changeStatus} pendingId={pendingId} />
+          <BuyerTable buyers={results} onStatusChange={changeStatus} pendingId={pendingId} />
         </div>
       ) : null}
 
       {!error && !loading && results.length === 0 ? (
         <div className="mt-5 rounded-lg border border-dashed border-rule-strong bg-panel px-6 py-12 text-center">
-          {/* BUG-7. The sandbox built this line with dangerouslySetInnerHTML and
-              interpolated the raw query, so searching `<img src=x onerror=…>`
-              executed it. Rendered as a child, React escapes it and the same
-              input is displayed as the text it is. */}
+          {/* Rendered as a child, so React escapes it. Building this line as raw
+              HTML with the query interpolated is a reflected-XSS hole. */}
           <p className="text-sm text-ink-muted">
-            {filters.q ? <>No borrowers match “{filters.q}”.</> : 'No borrowers match these filters.'}
+            {filters.q ? <>No buyers match “{filters.q}”.</> : 'No buyers match these filters.'}
           </p>
           <p className="mt-1 text-xs text-ink-faint">Try widening the filters.</p>
         </div>
