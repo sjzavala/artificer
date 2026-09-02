@@ -10,6 +10,7 @@ import { ApprovalModal } from './ApprovalModal';
 import { StatusPill } from './ConfidenceChip';
 import { OmDraftPanel } from './OmDraftPanel';
 import { AskPanel } from './AskPanel';
+import { DealBuyerMatches } from './DealBuyerMatches';
 import { PipelineStepper, type Stage } from './PipelineStepper';
 import { ConfidenceMeter } from './ConfidenceMeter';
 import { SECTION_STYLES } from './sections';
@@ -296,6 +297,12 @@ export function ReviewScreen({ deal, salesforceMode }: { deal: Deal; salesforceM
               setActivePath(null);
             }}
           />
+
+          {/* After the ask box, because reading the deal comes before working
+              out who wants it — and above the fields, because once a reviewer
+              has been through them the next question is who to call, not which
+              field to read again. */}
+          <DealBuyerMatches dealId={deal.id} />
 
           {approved ? (
             <OmDraftPanel
