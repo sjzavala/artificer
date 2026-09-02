@@ -49,9 +49,15 @@ const ORDER_BY: Record<SortKey, string> = {
  * implementation of the 45- and 180-day rules rather than one here and another
  * in the in-memory repository that could quietly disagree.
  *
- * The cap rates are cast to float8 because a `numeric` column comes back from
- * the driver as a string, and `6.25` arriving as `"6.25"` would compare and
- * sort as text on the client.
+ * The cap rates and equity are cast to float8 because `numeric` and `bigint`
+ * both come back from the driver as strings — deliberately, since neither fits
+ * JavaScript's number type in general. Money here tops out in the tens of
+ * millions, far inside float64's exact-integer range, so the cast is safe and
+ * the alternative is worse: without it this repository returns a string where
+ * the in-memory one returns a number, and the same field has two types
+ * depending on which backend answered. Comparisons survive that by coercion.
+ * Formatting does not — `toLocaleString` on a string returns it unchanged, so
+ * $3,600,000 renders as $3600000 and nobody notices for a while.
  */
 export const SELECT_COLUMNS = `
   id,
@@ -59,7 +65,7 @@ export const SELECT_COLUMNS = `
   contact_name AS "contactName",
   email,
   capital_source AS "capitalSource",
-  equity,
+  equity::float8 AS equity,
   target_cap_rate_min::float8 AS "targetCapRateMin",
   target_cap_rate_max::float8 AS "targetCapRateMax",
   property_types AS "propertyTypes",

@@ -232,7 +232,13 @@ function verifyCitations(
       continue;
     }
 
-    citations.push({ marker, quote, sourceLocation: anchorId, modelAnchorCorrect });
+    citations.push({
+      marker,
+      quote,
+      sourceLocation: anchorId,
+      page: paragraphs.find((p) => p.id === anchorId)?.page ?? null,
+      modelAnchorCorrect,
+    });
   }
 
   // One passage per marker; a repeat is the model citing the same place twice.

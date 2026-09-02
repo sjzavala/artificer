@@ -299,7 +299,8 @@ async function runReadAudit(input: Record<string, unknown>): Promise<ToolRun> {
     name: 'read_audit',
     input,
     ok: true,
-    summary: `${entries.length} entr${entries.length === 1 ? 'y' : 'ies'}${dealId ? ` for ${dealId}` : ''}`,
+    // The deal id is plumbing; the summary line is read by a broker.
+    summary: `${entries.length} entr${entries.length === 1 ? 'y' : 'ies'}${dealId ? ' for this deal' : ' across everything'}`,
     result: {
       count: entries.length,
       entries: entries.map((e) => ({

@@ -17,6 +17,11 @@ export interface Citation {
   quote: string;
   /** Anchor id (`p-34`) — resolved by us, not trusted from the model. */
   sourceLocation: string;
+  /**
+   * The page the passage sits on. Carried alongside the anchor id because the
+   * id is plumbing — a reader wants "page 3", not "p-34".
+   */
+  page: number | null;
   /** True when the model's own anchor was already right. Useful as a drift signal. */
   modelAnchorCorrect: boolean;
 }
