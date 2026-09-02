@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getDeal } from '@/lib/deals';
 import { getBuyerRepo } from '@/lib/buyers/db';
 import { repositoryFailure } from '@/lib/buyers/errors';
-import { dealProfile, matchBuyers } from '@/lib/copilot/match';
+import { dealProfile, matchBuyers } from '@/lib/factotum/match';
 import { MAX_LIMIT } from '@/lib/buyers/types';
 
 export const runtime = 'nodejs';
@@ -10,12 +10,12 @@ export const runtime = 'nodejs';
 /**
  * Who could take this deal.
  *
- * The same matching the copilot reaches for, on its own route so the review
+ * The same matching the factotum reaches for, on its own route so the review
  * screen can ask directly. It was only reachable by opening a chat and
  * phrasing a question, which meant the one thing the brokerage actually needs —
  * who do I call — depended on knowing the assistant existed.
  *
- * No model involved. Five comparisons in TypeScript, the same ones the copilot
+ * No model involved. Five comparisons in TypeScript, the same ones the factotum
  * gets back when it calls the tool.
  */
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {

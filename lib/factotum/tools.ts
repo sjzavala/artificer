@@ -12,7 +12,7 @@ import { dealProfile, matchBuyers } from './match';
 import type { ToolRun } from './types';
 
 /**
- * The copilot's tools.
+ * The factotum's tools.
  *
  * All seven are reads. That is a structural guarantee rather than an instruction
  * the model is asked to respect: there is no write tool here, so no amount of
@@ -180,7 +180,7 @@ export async function runTool(name: string, input: Record<string, unknown>): Pro
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error(`[artificer] copilot tool ${name} failed: ${message}`);
+    console.error(`[artificer] factotum tool ${name} failed: ${message}`);
     return fail(name, input, `That lookup failed: ${message}`);
   }
 }
@@ -237,7 +237,7 @@ async function runAskDocument(input: Record<string, unknown>): Promise<ToolRun> 
       ? `${outcome.citations.length} passage${outcome.citations.length === 1 ? '' : 's'} from ${deal.document.fileName}`
       : `${deal.document.fileName} does not address it`,
     // The citations travel to the UI so a document claim stays checkable after
-    // it has been through the copilot rather than only inside the ask panel.
+    // it has been through the factotum rather than only inside the ask panel.
     citations: outcome.citations.map((c) => ({ ...c, dealId })),
     result: {
       answered: outcome.answered,

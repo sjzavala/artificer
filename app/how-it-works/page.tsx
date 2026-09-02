@@ -331,12 +331,12 @@ export default async function HowItWorksPage() {
           </p>
         </section>
 
-        {/* ---- The copilot ---------------------------------------------------- */}
+        {/* ---- The factotum ---------------------------------------------------- */}
         <section className="mt-12">
-          <SectionHeading>The copilot</SectionHeading>
+          <SectionHeading>The Factotum</SectionHeading>
 
           <p className="mt-4 max-w-3xl text-sm leading-relaxed text-ink-soft">
-            The other tabs each answer one kind of question. The <Strong>Copilot</Strong> reaches
+            The other tabs each answer one kind of question. The <Strong>Factotum</Strong> reaches
             all of them at once, which is what makes the question a brokerage actually asks
             answerable: <Strong>who do I call about this deal?</Strong> Answering that means
             knowing the deal&rsquo;s cap rate, state, asset class, guaranty and price, then holding
@@ -381,7 +381,7 @@ export default async function HowItWorksPage() {
               <p className="mt-3 rounded-md bg-amber-50 px-2.5 py-2 text-2xs leading-relaxed text-amber-900">
                 <Strong>Asking prices, not sales.</Strong> A seller listing at 6.75% tells you what
                 is being asked today, not what anything traded for. It is useful for placing a deal
-                in a range and misleading if you read it as a valuation — so the copilot says
+                in a range and misleading if you read it as a valuation — so the Factotum says
                 &ldquo;currently listed at&rdquo; rather than &ldquo;trading at&rdquo;. There are no
                 closed comps here, and no other outside source.
               </p>
@@ -457,7 +457,7 @@ export default async function HowItWorksPage() {
             <Principle
               tone="good"
               title="It will not act on your behalf"
-              body="The copilot can read everything and change nothing. That is structural rather than a rule it follows: no tool exists for it to write with, so no way of asking will produce one."
+              body="The factotum can read everything and change nothing. That is structural rather than a rule it follows: no tool exists for it to write with, so no way of asking will produce one."
             />
             <Principle
               tone="good"
@@ -473,7 +473,7 @@ export default async function HowItWorksPage() {
           <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-ink-soft">
             A Dollar General offering memo, already extracted. Two fields are flagged — one of them
             because the memo contradicts itself about the building size. See whether you catch it,
-            then ask the copilot who you should call about it.
+            then ask the Factotum who you should call about it.
           </p>
           <div className="mt-4 flex flex-wrap items-center gap-2.5">
             <Link
@@ -491,11 +491,11 @@ export default async function HowItWorksPage() {
               See the buyer pipeline
             </Link>
             <Link
-              href="/copilot"
+              href="/factotum"
               className="focus-ring group inline-flex items-center gap-2 rounded-lg border border-accent-ring bg-white px-4 py-2.5 text-sm font-medium text-accent transition-colors hover:border-accent"
             >
               <Sparkles size={15} />
-              Ask the copilot
+              Ask the Factotum
             </Link>
           </div>
         </section>
@@ -577,7 +577,7 @@ function Step({ n, title, body }: { n: number; title: string; body: React.ReactN
   );
 }
 
-/** One capability the copilot can reach, in the two-column list above. */
+/** One capability the factotum can reach, in the two-column list above. */
 function ToolLine({ icon, name, body }: { icon: React.ReactNode; name: string; body: string }) {
   return (
     <div className="flex gap-2">

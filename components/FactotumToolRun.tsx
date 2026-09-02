@@ -4,11 +4,11 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { ChevronDown, FileSearch, ListTree, Store, TriangleAlert, Users, Wand2, ScrollText } from 'lucide-react';
 import { formatMoney } from '@/lib/format';
-import type { ToolRun } from '@/lib/copilot/types';
-import type { BuyerMatch } from '@/lib/copilot/match';
+import type { ToolRun } from '@/lib/factotum/types';
+import type { BuyerMatch } from '@/lib/factotum/match';
 
 /**
- * What the copilot looked up, shown rather than described.
+ * What the factotum looked up, shown rather than described.
  *
  * The assistant is read-only, so there is no reason to hide its working — and
  * every reason to show it. "Eleven buyers fit" is a claim; the same line with
@@ -41,7 +41,7 @@ const LABELS: Record<string, string> = {
   search_market_listings: 'Checked the market',
 };
 
-export function CopilotToolRun({ run }: { run: ToolRun }) {
+export function FactotumToolRun({ run }: { run: ToolRun }) {
   const [open, setOpen] = useState(false);
   const Icon = ICONS[run.name] ?? ListTree;
 

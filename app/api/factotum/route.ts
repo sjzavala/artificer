@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { streamCopilot, CopilotError } from '@/lib/copilot/agent';
-import { MAX_HISTORY_TURNS, QUESTION_MAX_LENGTH, type CopilotTurn } from '@/lib/copilot/types';
+import { streamFactotum, FactotumError } from '@/lib/factotum/agent';
+import { MAX_HISTORY_TURNS, QUESTION_MAX_LENGTH, type FactotumTurn } from '@/lib/factotum/types';
 import { rateLimit } from '@/lib/rate-limit';
 import { SESSION_COOKIE } from '@/lib/session';
 
@@ -9,7 +9,7 @@ export const runtime = 'nodejs';
 export const maxDuration = 120;
 
 /**
- * The broker copilot.
+ * The broker factotum.
  *
  * Stateless: the client replays the conversation, the server holds nothing. A
  * read-only assistant has no state worth persisting, and not storing the
@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
   // A single question can fan out into several tool calls, one of which reads a
   // whole document. This is the most expensive route in the app.
   const session = request.cookies.get(SESSION_COOKIE)?.value ?? 'anonymous';
-  const limit = rateLimit(`copilot:${session}`, { limit: 15, windowMs: 60_000 });
+  const limit = rateLimit(`factotum:${session}`, { limit: 15, windowMs: 60_000 });
   if (!limit.allowed) {
     return NextResponse.json(
       { error: 'Too many questions in a row. Wait a moment and try again.' },
@@ -62,15 +62,15 @@ export async function POST(request: NextRequest) {
         controller.enqueue(encoder.encode(`${JSON.stringify(event)}\n`));
 
       try {
-        for await (const event of streamCopilot(history, question)) {
+        for await (const event of streamFactotum(history, question)) {
           send(event);
         }
       } catch (error) {
         // The status code is long gone — a 200 went out with the first byte —
         // so a failure has to arrive as an event the client can render.
         const message =
-          error instanceof CopilotError ? error.message : 'Could not answer that question.';
-        if (!(error instanceof CopilotError)) console.error('[artificer] copilot failed', error);
+          error instanceof FactotumError ? error.message : 'Could not answer that question.';
+        if (!(error instanceof FactotumError)) console.error('[artificer] factotum failed', error);
         send({ type: 'error', error: message });
       } finally {
         controller.close();
@@ -96,10 +96,10 @@ export async function POST(request: NextRequest) {
  * client that sent a thousand turns, or tool results it invented, gets neither
  * into the prompt.
  */
-function normalizeHistory(raw: unknown): CopilotTurn[] {
+function normalizeHistory(raw: unknown): FactotumTurn[] {
   if (!Array.isArray(raw)) return [];
 
-  const turns: CopilotTurn[] = [];
+  const turns: FactotumTurn[] = [];
   for (const entry of raw) {
     const turn = entry as { role?: unknown; content?: unknown };
     const role = turn.role === 'assistant' ? 'assistant' : turn.role === 'user' ? 'user' : null;

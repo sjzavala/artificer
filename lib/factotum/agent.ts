@@ -1,7 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { DEFAULT_MODEL, describeApiError, getAnthropicClient } from '@/lib/extraction/client';
 import { runTool, TOOLS } from './tools';
-import type { CopilotEvent, CopilotReply, CopilotTurn, ToolRun } from './types';
+import type { FactotumEvent, FactotumReply, FactotumTurn, ToolRun } from './types';
 
 /**
  * The agent loop.
@@ -23,8 +23,10 @@ const MAX_ITERATIONS = 12;
 const MAX_OUTPUT_TOKENS = 4_096;
 
 const SYSTEM_PROMPT = [
-  'You are a net-lease brokerage assistant, working alongside a broker over their own',
-  'deals, their documents, their buyer pipeline and their audit trail.',
+  'You are the Factotum — a net-lease brokerage assistant, working alongside a broker over',
+  'their own deals, their documents, their buyer pipeline and their audit trail. A factotum',
+  'does all kinds of work, which is the job: you are the one place they can ask anything',
+  'about any of it.',
   '',
   'Behave like a capable colleague, not a search box. A broker will ask you things that do',
   'not map onto a single lookup — what is worth worrying about in a deal, how to position',
@@ -112,25 +114,25 @@ const SYSTEM_PROMPT = [
   'headings.',
 ].join('\n');
 
-export class CopilotError extends Error {
+export class FactotumError extends Error {
   constructor(message: string, readonly status = 502) {
     super(message);
-    this.name = 'CopilotError';
+    this.name = 'FactotumError';
   }
 }
 
 /**
  * The loop, as a stream of things that happened.
  *
- * A generator rather than two functions: `runCopilot` below drains it for any
+ * A generator rather than two functions: `runFactotum` below drains it for any
  * caller that just wants the finished reply, so the streaming and non-streaming
  * paths cannot drift apart — there is only one loop, and it is this one.
  */
-export async function* streamCopilot(
-  history: CopilotTurn[],
+export async function* streamFactotum(
+  history: FactotumTurn[],
   question: string,
   options: { client?: Anthropic; model?: string } = {},
-): AsyncGenerator<CopilotEvent, void, undefined> {
+): AsyncGenerator<FactotumEvent, void, undefined> {
   const client = options.client ?? getAnthropicClient();
   const model = options.model ?? DEFAULT_MODEL;
   const startedAt = Date.now();
@@ -184,7 +186,7 @@ export async function* streamCopilot(
       response = await stream.finalMessage();
     } catch (error) {
       const described = describeApiError(error);
-      throw new CopilotError(described ?? 'Could not reach the Anthropic API. Try again shortly.');
+      throw new FactotumError(described ?? 'Could not reach the Anthropic API. Try again shortly.');
     }
 
     const thisTurnMs = Date.now() - turnStarted;
@@ -260,7 +262,7 @@ export async function* streamCopilot(
   const durationMs = Date.now() - startedAt;
 
   console.log(
-    `[artificer] copilot model=${model} tools=${toolRuns.map((t) => t.name).join(',') || 'none'} ` +
+    `[artificer] factotum model=${model} tools=${toolRuns.map((t) => t.name).join(',') || 'none'} ` +
       `in=${inputTokens} out=${outputTokens} cacheRead=${cacheReadTokens} ` +
       `ms=${durationMs} model=${modelMs}ms tools=${toolMs}ms truncated=${truncated} ` +
       `[${timings.join(' ')}]`,
@@ -286,17 +288,17 @@ export async function* streamCopilot(
  * It drains the generator rather than reimplementing the loop, which is the
  * point: there is one agent loop in this file and both paths run it.
  */
-export async function runCopilot(
-  history: CopilotTurn[],
+export async function runFactotum(
+  history: FactotumTurn[],
   question: string,
   options: { client?: Anthropic; model?: string } = {},
-): Promise<CopilotReply> {
+): Promise<FactotumReply> {
   const toolRuns: ToolRun[] = [];
   let answer = '';
   let durationMs = 0;
   let truncated = true;
 
-  for await (const event of streamCopilot(history, question, options)) {
+  for await (const event of streamFactotum(history, question, options)) {
     if (event.type === 'tool') toolRuns.push(event.run);
     else if (event.type === 'text') answer += event.delta;
     else if (event.type === 'reset_text') answer = '';

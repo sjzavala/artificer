@@ -11,12 +11,13 @@ Artificer is net-lease deal software for a brokerage. It does four things:
 - **A buyer pipeline.** Who is looking, what they will pay for, and how long
   they have; 1031 exchange buyers carry a 45-day identification clock that does
   not stop.
-- **A copilot.** One place to ask across all of it, including the question the
+- **The Factotum.** A factotum does all kinds of work, which is the job — one
+  place to ask across all of it, including the question the
   business actually turns on — *who do I call about this deal?* — plus what
   comparable property is currently listed at on the open market.
 
 Nothing reaches Salesforce until a human clicks approve. The AI drafts; the
-person decides; the audit log records who decided what. The copilot can read
+person decides; the audit log records who decided what. The Factotum can read
 everything and change nothing, and that is structural rather than a rule it
 follows — there is no write tool for it to reach.
 
@@ -153,7 +154,7 @@ disagree with the date it came from. A window that has closed is shown as closed
 rather than hidden, because there is no extension in the statute and someone
 needs to know why a buyer went quiet.
 
-### The copilot
+### The Factotum
 
 Seven tools, all reads: the deal pipeline, every extracted field with its
 confidence, the documents, the buyer book, deal-to-buyer matching, the audit log,
@@ -290,7 +291,7 @@ Each reuses `domain`, `documents` and `audit` rather than reimplementing them:
 
 The monorepo above is a plan, not built. What exists today is the single app
 described in the rest of this document — though "single app" now means four
-capabilities rather than one workflow, and the copilot has already made the case
+capabilities rather than one workflow, and the Factotum has already made the case
 for `domain` better than the argument did. It can answer "who do I call about
 this deal" only because a buyer's `propertyTypes` and `minGuarantor` *are* the
 deal schema's `PROPERTY_TYPES` and `GUARANTOR_TYPES`, imported rather than
@@ -397,15 +398,15 @@ npm run generate-samples && git diff --exit-code evals/samples   # clean ⇒ in 
 ```mermaid
 flowchart LR
     subgraph browser["Browser"]
-        UI["Deals · Buyers · Copilot · Audit"]
+        UI["Deals · Buyers · Factotum · Audit"]
     end
 
     subgraph server["Next.js server — the only place the API key exists"]
         MW["Middleware<br/><i>access gate on every route</i>"]
-        API["API routes<br/>extract · field · approve · ask · buyers · copilot"]
+        API["API routes<br/>extract · field · approve · ask · buyers · factotum"]
         EX["lib/extraction<br/>pdf → prompt → parse → anchor"]
         ASK["lib/ask<br/><i>question → verified passages</i>"]
-        COP["lib/copilot<br/><i>tool loop · deal↔buyer match</i>"]
+        COP["lib/factotum<br/><i>tool loop · deal↔buyer match</i>"]
         SCHEMA[["shared/schema.ts + shared/buyer.ts<br/><b>single source of truth</b>"]]
     end
 
@@ -509,7 +510,7 @@ looks, because three things depend on the gate being the only boundary:
   equity and contact details, the whole audit log. Commercially, a buyer's
   capital position is exactly the sort of thing that should not be visible
   firm-wide by default.
-- **The copilot lowers the cost of reading all of it.** It does not widen the
+- **The Factotum lowers the cost of reading all of it.** It does not widen the
   boundary — it reaches nothing a signed-in visitor could not already open — but
   browsing sixty buyers and a document used to take effort and now takes one
   sentence. A shared code that leaks was always bad; it is worse when the leak

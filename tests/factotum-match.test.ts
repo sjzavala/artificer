@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DOWN_PAYMENT_SHARE, matchBuyers, scoreBuyer, type DealProfile } from '@/lib/copilot/match';
+import { DOWN_PAYMENT_SHARE, matchBuyers, scoreBuyer, type DealProfile } from '@/lib/factotum/match';
 import type { Buyer } from '@/shared/buyer';
 
 /**
