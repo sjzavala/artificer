@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { CornerDownLeft, Loader2, RotateCcw, Sparkles, TriangleAlert } from 'lucide-react';
 import { CopilotToolRun } from './CopilotToolRun';
+import { Markdown } from './Markdown';
 import { QUESTION_MAX_LENGTH, type CopilotReply, type CopilotTurn, type ToolRun } from '@/lib/copilot/types';
 
 /**
@@ -132,9 +133,13 @@ export function Copilot() {
                     </div>
                   ) : null}
 
-                  {/* Model output, rendered as text. */}
-                  <div className="whitespace-pre-wrap text-sm leading-relaxed text-ink">
-                    {exchange.reply.answer}
+                  {/* The model writes markdown — bold runs, the occasional
+                      comparison table — and rendering it as preformatted text
+                      put literal asterisks and pipe characters on screen. This
+                      is the same small renderer the OM draft uses: it emits text
+                      nodes only, so nothing the model writes can inject markup. */}
+                  <div className="text-sm leading-relaxed text-ink">
+                    <Markdown source={exchange.reply.answer} />
                   </div>
 
                   {exchange.reply.truncated ? (
@@ -147,12 +152,12 @@ export function Copilot() {
                     </p>
                   ) : null}
 
-                  <p className="mt-2 font-mono text-2xs text-ink-faint">
-                    {(exchange.reply.durationMs / 1000).toFixed(1)}s · {exchange.reply.inputTokens} in /{' '}
-                    {exchange.reply.outputTokens} out
-                    {exchange.reply.cacheReadTokens > 0
-                      ? ` · ${exchange.reply.cacheReadTokens} cached`
-                      : null}
+                  {/* Token counts are engineering telemetry and belong in the
+                      server log, not in front of someone deciding who to call.
+                      The elapsed time stays, because a reader who waited for it
+                      is entitled to see what they waited for. */}
+                  <p className="mt-2 text-2xs text-ink-faint">
+                    Answered in {(exchange.reply.durationMs / 1000).toFixed(1)}s
                   </p>
                 </div>
               ) : null}

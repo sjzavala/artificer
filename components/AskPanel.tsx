@@ -167,8 +167,8 @@ export function AskPanel({
                       <span className="block text-xs italic leading-snug text-ink-soft">
                         “{truncate(citation.quote)}”
                       </span>
-                      <span className="mt-0.5 block font-mono text-2xs text-ink-faint group-hover:text-accent">
-                        {citation.sourceLocation}
+                      <span className="mt-0.5 block text-2xs text-ink-faint group-hover:text-accent">
+                        {citation.page ? `page ${citation.page}` : 'in the document'}
                       </span>
                     </span>
                   </button>
@@ -184,10 +184,8 @@ export function AskPanel({
             </p>
           ) : null}
 
-          <p className="mt-2.5 font-mono text-2xs text-ink-faint">
-            {(result.durationMs / 1000).toFixed(1)}s · {result.inputTokens} in / {result.outputTokens} out
-            {result.cacheReadTokens > 0 ? ` · ${result.cacheReadTokens} cached` : null}
-            {result.cacheCreationTokens > 0 ? ` · ${result.cacheCreationTokens} cache write` : null}
+          <p className="mt-2.5 text-2xs text-ink-faint">
+            Answered in {(result.durationMs / 1000).toFixed(1)}s
           </p>
         </div>
       ) : null}

@@ -306,6 +306,14 @@ describe('equity sorts numerically', () => {
     expect(rowsSql).toMatch(/ORDER BY equity DESC/);
     expect(rowsSql).not.toMatch(/equity::text/);
   });
+
+  it('selects equity as a number, so the two repositories agree on its type', () => {
+    // bigint reaches the client as a string unless it is cast. The in-memory
+    // repository returns a real number, so without this the same field has two
+    // types depending on which backend answered — comparisons survive by
+    // coercion, formatting does not.
+    expect(buildSearchSql(query(), NOW).rowsSql).toMatch(/equity::float8 AS equity/);
+  });
 });
 
 describe('pagination is stable across requests', () => {
