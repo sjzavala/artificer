@@ -2,14 +2,14 @@ import type { Citation } from '@/lib/ask/types';
 import type { MatchResult } from './match';
 
 /** A document passage, carrying the deal it came from so the UI can link to it. */
-export interface CopilotCitation extends Citation {
+export interface FactotumCitation extends Citation {
   dealId: string;
 }
 
 /**
  * One tool call, as the UI shows it.
  *
- * The copilot is read-only, so showing its work costs nothing and buys the
+ * The factotum is read-only, so showing its work costs nothing and buys the
  * thing that matters: a broker can see that "eleven buyers fit" came from
  * scoring the book rather than from the model's impression of it.
  */
@@ -22,13 +22,13 @@ export interface ToolRun {
   /** What the model receives back. */
   result: unknown;
   /** Verified passages, when the tool read a document. */
-  citations?: CopilotCitation[];
+  citations?: FactotumCitation[];
   /** The full scoring, when the tool matched buyers, so the UI can render cards. */
   match?: MatchResult;
 }
 
 /** A turn in the conversation, as the client stores and replays it. */
-export interface CopilotTurn {
+export interface FactotumTurn {
   role: 'user' | 'assistant';
   content: string;
   /** Assistant turns only: what it looked up to answer. */
@@ -36,7 +36,7 @@ export interface CopilotTurn {
 }
 
 /**
- * One thing that happened while the copilot worked, sent to the browser as it
+ * One thing that happened while the factotum worked, sent to the browser as it
  * happens rather than collected and posted at the end.
  *
  * A question takes six to twenty seconds because the model writes most of the
@@ -46,7 +46,7 @@ export interface CopilotTurn {
  * steadily after. Streaming does not make it quicker, it stops it feeling
  * broken.
  */
-export type CopilotEvent =
+export type FactotumEvent =
   /** A lookup finished. The card can appear now rather than with everything else. */
   | { type: 'tool'; run: ToolRun }
   /** A fragment of the answer, in the order it was written. */
@@ -64,7 +64,7 @@ export type CopilotEvent =
   | { type: 'done'; durationMs: number; truncated: boolean }
   | { type: 'error'; error: string };
 
-export interface CopilotReply {
+export interface FactotumReply {
   answer: string;
   toolRuns: ToolRun[];
   model: string;

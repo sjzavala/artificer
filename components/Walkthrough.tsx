@@ -34,7 +34,7 @@ export function Walkthrough({ sampleDealHref }: { sampleDealHref: string | null 
   /**
    * Every step of this walkthrough happens in the deal-intake flow — open the
    * deal, check a citation, resolve a flag, approve, see the record, draft the
-   * summary. On the buyer pipeline or the copilot it was telling people to
+   * summary. On the buyer pipeline or the factotum it was telling people to
    * "click any field on the right" of a screen that has no fields, which reads
    * as broken rather than as guidance meant for somewhere else.
    *

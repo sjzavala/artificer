@@ -2,17 +2,17 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { CornerDownLeft, Loader2, RotateCcw, Sparkles, TriangleAlert } from 'lucide-react';
-import { CopilotToolRun } from './CopilotToolRun';
+import { FactotumToolRun } from './FactotumToolRun';
 import { Markdown } from './Markdown';
 import {
   QUESTION_MAX_LENGTH,
-  type CopilotEvent,
-  type CopilotTurn,
+  type FactotumEvent,
+  type FactotumTurn,
   type ToolRun,
-} from '@/lib/copilot/types';
+} from '@/lib/factotum/types';
 
 /**
- * The copilot conversation.
+ * The factotum conversation.
  *
  * The transcript lives here and is replayed to the server with each question —
  * the assistant is read-only, so there is nothing worth persisting, and keeping
@@ -41,7 +41,7 @@ const EXAMPLES = [
   'Who carries roof and structure on the Dollar General, and does that rule any buyers out?',
 ];
 
-export function Copilot() {
+export function Factotum() {
   const [question, setQuestion] = useState('');
   const [exchanges, setExchanges] = useState<Exchange[]>([]);
   const [busy, setBusy] = useState(false);
@@ -65,7 +65,7 @@ export function Copilot() {
     // Only answered exchanges are replayed: a turn that failed has no assistant
     // answer, and sending the question without one would leave two user turns
     // in a row describing a question that was never answered.
-    const history: CopilotTurn[] = exchanges
+    const history: FactotumTurn[] = exchanges
       .filter((e) => e.answer && !e.error)
       .flatMap((e) => [
         { role: 'user' as const, content: e.question },
@@ -83,7 +83,7 @@ export function Copilot() {
       });
 
     try {
-      const response = await fetch('/api/copilot', {
+      const response = await fetch('/api/factotum', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ question: q, history }),
@@ -115,9 +115,9 @@ export function Copilot() {
         for (const line of lines) {
           if (!line.trim()) continue;
 
-          let event: CopilotEvent;
+          let event: FactotumEvent;
           try {
-            event = JSON.parse(line) as CopilotEvent;
+            event = JSON.parse(line) as FactotumEvent;
           } catch {
             continue; // A malformed line is not worth ending the answer over.
           }
@@ -168,7 +168,7 @@ export function Copilot() {
         {exchanges.length === 0 ? (
           <div className="rounded-lg border border-dashed border-rule-strong bg-panel px-6 py-10 text-center">
             <Sparkles size={18} aria-hidden className="mx-auto text-accent" />
-            <p className="mt-3 text-sm text-ink">Ask about your deals and your buyers.</p>
+            <p className="mt-3 text-sm text-ink">Ask about your deals, your buyers, the market.</p>
             <p className="mx-auto mt-1 max-w-md text-xs leading-relaxed text-ink-muted">
               It reads your pipeline and your documents and shows the lookups behind every answer.
               It cannot change anything — every write in Artificer is still a person clicking a
@@ -210,7 +210,7 @@ export function Copilot() {
                   {exchange.toolRuns.length > 0 ? (
                     <div className="mb-2.5 space-y-1">
                       {exchange.toolRuns.map((run: ToolRun, j: number) => (
-                        <CopilotToolRun key={j} run={run} />
+                        <FactotumToolRun key={j} run={run} />
                       ))}
                     </div>
                   ) : null}
@@ -277,7 +277,7 @@ export function Copilot() {
       >
         <div className="flex gap-2">
           <input
-            aria-label="Ask the copilot"
+            aria-label="Ask the factotum"
             type="text"
             value={question}
             maxLength={QUESTION_MAX_LENGTH}
