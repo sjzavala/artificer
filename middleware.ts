@@ -34,5 +34,8 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|robots.txt).*)'],
+  // `icon.svg` is here for the same reason `favicon.ico` is: Next serves the
+  // app icon from a real route, and a gated icon is one the browser silently
+  // fails to load — which looks like a missing favicon rather than a redirect.
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|icon.svg|robots.txt).*)'],
 };

@@ -43,9 +43,9 @@ export function Walkthrough({ sampleDealHref }: { sampleDealHref: string | null 
    */
   const onWalkthroughRoute =
     pathname === '/' ||
+    pathname === '/deals' ||
     Boolean(pathname?.startsWith('/deals/')) ||
-    Boolean(pathname?.startsWith('/records/')) ||
-    pathname === '/how-it-works';
+    Boolean(pathname?.startsWith('/records/'));
 
   const [narrow, setNarrow] = useState(false);
 
