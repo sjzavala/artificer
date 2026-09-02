@@ -5,12 +5,21 @@ import {
   Crosshair,
   Database,
   FileUp,
+  Eye,
+  FileSearch,
+  Globe,
+  ListTree,
+  Lock,
   MessageCircleQuestion,
+  MessagesSquare,
   Quote,
   ScanLine,
+  ScrollText,
   ShieldCheck,
   Sparkles,
+  Store,
   Users,
+  Wand2,
 } from 'lucide-react';
 import { AppShell } from '@/components/AppShell';
 import { PipelineStepper } from '@/components/PipelineStepper';
@@ -38,9 +47,10 @@ export default async function HowItWorksPage() {
           </h1>
           <p className="mt-3 text-[0.9375rem] leading-relaxed text-ink-soft">
             Artificer reads a net-lease deal document and turns it into structured data you can
-            review, and keeps the book of buyers that data gets matched against. It is bounded on
-            purpose: it answers from your documents and your pipeline, it shows you where every
-            answer came from, and the decisions that matter are still yours.
+            review, keeps the book of buyers that data gets matched against, and has an assistant
+            that can reach all of it at once — plus what is currently on the market. It is bounded
+            on purpose: it answers from your documents, your pipeline and live listings, it shows
+            you where every answer came from, and the decisions that matter are still yours.
           </p>
         </header>
 
@@ -321,6 +331,94 @@ export default async function HowItWorksPage() {
           </p>
         </section>
 
+        {/* ---- The copilot ---------------------------------------------------- */}
+        <section className="mt-12">
+          <SectionHeading>The copilot</SectionHeading>
+
+          <p className="mt-4 max-w-3xl text-sm leading-relaxed text-ink-soft">
+            The other tabs each answer one kind of question. The <Strong>Copilot</Strong> reaches
+            all of them at once, which is what makes the question a brokerage actually asks
+            answerable: <Strong>who do I call about this deal?</Strong> Answering that means
+            knowing the deal&rsquo;s cap rate, state, asset class, guaranty and price, then holding
+            every buyer&rsquo;s stated criteria against them — two sides that only became
+            comparable because they are described in the same words.
+          </p>
+
+          <p className="mt-3 max-w-3xl text-sm leading-relaxed text-ink-soft">
+            It holds a conversation, so a follow-up can say &ldquo;which of those&rdquo; and be
+            understood, and it will do the work a colleague would: draft the email, say what the
+            buyer will push back on, tell you where a price sits against the market.
+          </p>
+
+          <div className="mt-5 grid gap-4 sm:grid-cols-2">
+            <div className="rounded-lg border border-rule bg-panel p-4">
+              <p className="eyebrow mb-2.5 flex items-center gap-1.5">
+                <Database size={12} aria-hidden className="text-ink-faint" />
+                In your workspace
+              </p>
+              <dl className="space-y-2">
+                <ToolLine icon={<ListTree size={12} />} name="The pipeline" body="Every deal, its status, and what is flagged." />
+                <ToolLine icon={<ScanLine size={12} />} name="Extracted fields" body={`All ${FIELD_COUNT}, with their confidence grades and whether a person confirmed them.`} />
+                <ToolLine icon={<FileSearch size={12} />} name="The documents" body="The same verified-passage reading the Ask box does." />
+                <ToolLine icon={<Users size={12} />} name="The buyer book" body="Who is looking, and whose 1031 clock is running down." />
+                <ToolLine icon={<Wand2 size={12} />} name="Deal-to-buyer matching" body="Fits and near misses, with the reason for each." />
+                <ToolLine icon={<ScrollText size={12} />} name="The audit log" body="Who did what, and when." />
+              </dl>
+            </div>
+
+            <div className="rounded-lg border border-rule bg-panel p-4">
+              <p className="eyebrow mb-2.5 flex items-center gap-1.5">
+                <Globe size={12} aria-hidden className="text-ink-faint" />
+                Outside it
+              </p>
+              <dl className="space-y-2">
+                <ToolLine
+                  icon={<Store size={12} />}
+                  name="Live listings"
+                  body="Net-lease property currently for sale on the NNN Pro marketplace — tenant, location, asking price, NOI and the cap rate those two imply."
+                />
+              </dl>
+              <p className="mt-3 rounded-md bg-amber-50 px-2.5 py-2 text-2xs leading-relaxed text-amber-900">
+                <Strong>Asking prices, not sales.</Strong> A seller listing at 6.75% tells you what
+                is being asked today, not what anything traded for. It is useful for placing a deal
+                in a range and misleading if you read it as a valuation — so the copilot says
+                &ldquo;currently listed at&rdquo; rather than &ldquo;trading at&rdquo;. There are no
+                closed comps here, and no other outside source.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            <CitationPath
+              tone="good"
+              icon={<Lock size={14} />}
+              title="It cannot act"
+              body="No status changes, no edits, no approvals — not as a rule it follows, but because no such tool exists for it to reach. Every write is still a person clicking a button."
+            />
+            <CitationPath
+              tone="good"
+              icon={<Eye size={14} />}
+              title="It shows its working"
+              body="Every lookup is listed above the answer and can be opened. “Eleven buyers fit” is a claim; the scoring behind it is something you can check before you phone anyone."
+            />
+            <CitationPath
+              tone="warn"
+              icon={<MessagesSquare size={14} />}
+              title="Facts and judgement differ"
+              body="A buyer, a figure, a date or a lease term comes from a lookup or it does not get said. What those facts imply — the risk, the positioning, the draft email — is the assistant’s own read, and it says so."
+            />
+          </div>
+
+          <p className="mt-4 max-w-3xl text-xs leading-relaxed text-ink-muted">
+            The matching itself is ordinary code, not something the assistant reasons its way
+            through: five comparisons — cap rate band, market, asset class, guaranty floor, and
+            whether the equity covers the cheque — run the same way every time. And a test the deal
+            cannot answer, because the document never stated the guarantor, passes rather than
+            fails. Excluding a buyer over a gap in a memo would narrow your list on the strength of
+            something nobody knows, so the gap is reported instead.
+          </p>
+        </section>
+
         {/* ---- Principles ---------------------------------------------------- */}
         <section className="mt-12">
           <SectionHeading>What it will and will not do</SectionHeading>
@@ -353,8 +451,13 @@ export default async function HowItWorksPage() {
             />
             <Principle
               tone="bad"
-              title="It will not answer from outside your documents"
-              body="Ask the assistant something the document does not cover and it says so. It will not reason from how net-lease deals usually work — you need to know what this document says, not what a typical one would."
+              title="The Ask box stays inside the document"
+              body="Ask it something the document does not cover and it says so. It will not reason from how net-lease deals usually work — on that screen you need to know what this document says, not what a typical one would."
+            />
+            <Principle
+              tone="good"
+              title="It will not act on your behalf"
+              body="The copilot can read everything and change nothing. That is structural rather than a rule it follows: no tool exists for it to write with, so no way of asking will produce one."
             />
             <Principle
               tone="good"
@@ -370,7 +473,7 @@ export default async function HowItWorksPage() {
           <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-ink-soft">
             A Dollar General offering memo, already extracted. Two fields are flagged — one of them
             because the memo contradicts itself about the building size. See whether you catch it,
-            then ask the document something the extraction did not cover.
+            then ask the copilot who you should call about it.
           </p>
           <div className="mt-4 flex flex-wrap items-center gap-2.5">
             <Link
@@ -386,6 +489,13 @@ export default async function HowItWorksPage() {
             >
               <Users size={15} />
               See the buyer pipeline
+            </Link>
+            <Link
+              href="/copilot"
+              className="focus-ring group inline-flex items-center gap-2 rounded-lg border border-accent-ring bg-white px-4 py-2.5 text-sm font-medium text-accent transition-colors hover:border-accent"
+            >
+              <Sparkles size={15} />
+              Ask the copilot
             </Link>
           </div>
         </section>
@@ -464,6 +574,19 @@ function Step({ n, title, body }: { n: number; title: string; body: React.ReactN
         <p className="mt-1 text-xs leading-relaxed text-ink-soft">{body}</p>
       </div>
     </li>
+  );
+}
+
+/** One capability the copilot can reach, in the two-column list above. */
+function ToolLine({ icon, name, body }: { icon: React.ReactNode; name: string; body: string }) {
+  return (
+    <div className="flex gap-2">
+      <span className="mt-0.5 shrink-0 text-ink-faint">{icon}</span>
+      <div className="min-w-0">
+        <dt className="text-xs font-medium text-ink">{name}</dt>
+        <dd className="text-2xs leading-relaxed text-ink-muted">{body}</dd>
+      </div>
+    </div>
   );
 }
 
